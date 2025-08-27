@@ -1,7 +1,7 @@
 using Helpers;
 using UnityEngine;
 
-namespace Characters
+namespace Players
 {
     [RequireComponent(typeof(Collider2D))]
     public class Player : MonoBehaviour
@@ -47,7 +47,7 @@ namespace Characters
                     _moveInput = 0f;
             }
 
-            transform.Translate(Vector3.right * _moveInput * speed * Time.deltaTime);
+            transform.Translate(-Vector3.right * _moveInput * speed * Time.deltaTime);
             transform.position = PlayAreaHelper.ClampToBounds(transform.position, playArea, _halfWidth, _halfHeight);
         }
     }
