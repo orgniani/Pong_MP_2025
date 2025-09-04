@@ -1,4 +1,3 @@
-using Helpers;
 using UnityEngine;
 
 namespace Players
@@ -10,20 +9,21 @@ namespace Players
         [SerializeField] private float speed = 8f;
         [SerializeField] private bool useWASD = true;
 
-        [Header("Play Area")]
-        [SerializeField] private Collider2D playArea;
-
         private float _moveInput;
-
         private float _halfHeight;
         private float _halfWidth;
+
+        private SpriteRenderer _parentRenderer;
 
         private void Awake()
         {
             var col = GetComponent<Collider2D>();
-
             _halfHeight = col.bounds.extents.y;
             _halfWidth = col.bounds.extents.x;
+
+            _parentRenderer = transform.parent.GetComponent<SpriteRenderer>();
+            if (_parentRenderer == null)
+                Debug.LogError("[Player] Parent does not have a SpriteRenderer!");
         }
 
         private void Update()
@@ -48,7 +48,25 @@ namespace Players
             }
 
             transform.Translate(-Vector3.right * _moveInput * speed * Time.deltaTime);
-            transform.position = PlayAreaHelper.ClampToBounds(transform.position, playArea, _halfWidth, _halfHeight);
+
+            if (_parentRenderer != null)
+                ClampToParentBounds();
+        }
+
+        private void ClampToParentBounds()
+        {
+            Bounds bounds = _parentRenderer.bounds;
+            Vector3 pos = transform.position;
+
+            float minX = bounds.min.x + _halfWidth;
+            float maxX = bounds.max.x - _halfWidth;
+            float minY = bounds.min.y + _halfHeight;
+            float maxY = bounds.max.y - _halfHeight;
+
+            pos.x = Mathf.Clamp(pos.x, minX, maxX);
+            pos.y = Mathf.Clamp(pos.y, minY, maxY);
+
+            transform.position = pos;
         }
     }
 }

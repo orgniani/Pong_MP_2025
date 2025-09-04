@@ -9,7 +9,7 @@ namespace Balls
         [Header("Config")]
         [SerializeField] private float startingSpeed = 5f;
         [SerializeField] private float minBounceAngle = 15f;
-        [SerializeField] private Collider2D playArea;
+        [SerializeField] private float speedIncreasePerSecond = 0.2f;
 
         [Header("Events")]
         public UnityEvent onLeftGoal;
@@ -21,8 +21,6 @@ namespace Balls
 
         private Rigidbody2D _rb;
         private float _currentSpeed;
-        private float _halfHeight;
-        private float _halfWidth;
 
         private void Awake()
         {
@@ -32,12 +30,10 @@ namespace Balls
 
             _rb = GetComponent<Rigidbody2D>();
             var col = GetComponent<Collider2D>();
-            _halfHeight = col.bounds.extents.y;
-            _halfWidth = col.bounds.extents.x;
 
-            _ballBounce.Initialize(_rb, playArea, _halfHeight, minBounceAngle);
-            _ballGoal.Initialize(_rb, playArea, _halfWidth, onLeftGoal, onRightGoal, ResetBall);
-            _ballSpeed.Initialize(_rb, startingSpeed);
+            _ballBounce.Initialize(_rb, minBounceAngle);
+            _ballGoal.Initialize(_rb, onLeftGoal, onRightGoal, ResetBall);
+            _ballSpeed.Initialize(_rb, startingSpeed, speedIncreasePerSecond);
         }
 
         private void Start()
@@ -48,13 +44,14 @@ namespace Balls
 
         private void FixedUpdate()
         {
-            _ballBounce.Tick();
             _ballGoal.Tick();
             _ballSpeed.Tick();
         }
 
         private void ResetBall(bool toRight)
         {
+            _ballSpeed.ResetSpeed();
+
             _currentSpeed = startingSpeed;
             _rb.position = Vector2.zero;
 
@@ -65,5 +62,9 @@ namespace Balls
             _rb.linearVelocity = dir * _currentSpeed;
         }
 
+        private void OnTriggerEnter2D(Collider2D other)
+        {
+            _ballBounce.ReflectY();
+        }
     }
 }

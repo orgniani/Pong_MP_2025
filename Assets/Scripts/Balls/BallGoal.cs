@@ -7,26 +7,18 @@ namespace Balls
     public class BallGoal
     {
         private Rigidbody2D _rb;
-        private Collider2D _playArea;
-
-        private float _halfWidth;
 
         private UnityEvent _onLeftGoal;
         private UnityEvent _onRightGoal;
-
         private Action<bool> _onReset;
 
         public void Initialize(
             Rigidbody2D rb,
-            Collider2D playArea,
-            float halfWidth,
             UnityEvent left,
             UnityEvent right,
             Action<bool> onReset)
         {
             _rb = rb;
-            _playArea = playArea;
-            _halfWidth = halfWidth;
             _onLeftGoal = left;
             _onRightGoal = right;
             _onReset = onReset;
@@ -34,21 +26,20 @@ namespace Balls
 
         public void Tick()
         {
-            Bounds b = _playArea.bounds;
-            Vector3 pos = _rb.position;
+            if (!Camera.main) return;
 
-            if (pos.x <= b.min.x + _halfWidth)
+            Vector3 viewportPos = Camera.main.WorldToViewportPoint(_rb.position);
+
+            if (viewportPos.x < 0f - 0.05f)
             {
                 _onLeftGoal?.Invoke();
                 _onReset(false);
             }
-
-            if (pos.x >= b.max.x - _halfWidth)
+            else if (viewportPos.x > 1f + 0.05f)
             {
                 _onRightGoal?.Invoke();
                 _onReset(true);
             }
         }
-
     }
 }
