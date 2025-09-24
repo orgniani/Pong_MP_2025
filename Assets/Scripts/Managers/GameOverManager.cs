@@ -8,14 +8,14 @@ namespace Managers
         [Networked]
         private bool _isGameOver { get; set; }
 
-        private RacePositionManager _racePositionManager;
+        private ScoreManager _scoreManager;
         private TimerManager _timerManager;
 
         public bool IsGameOver => _isGameOver;
 
         public override void Spawned()
         {
-            _racePositionManager = FindFirstObjectByType<RacePositionManager>();
+            _scoreManager = FindFirstObjectByType<ScoreManager>();
             _timerManager = FindFirstObjectByType<TimerManager>();
 
             Debug.Log("<color=green>NetworkGameOverManager spawned.</color>");
@@ -32,7 +32,7 @@ namespace Managers
                 return;
             }
 
-            if (_racePositionManager != null && !_racePositionManager.AreAnyActiveNonWinners())
+            if (_scoreManager != null && !_scoreManager.AreAnyActiveNonWinners())
             {
                 TriggerGameOver("All players finished or left");
             }

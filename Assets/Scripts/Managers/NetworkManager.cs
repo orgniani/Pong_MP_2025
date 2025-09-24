@@ -6,7 +6,6 @@ using Fusion.Sockets;
 using Common;
 using Managers.Network;
 using System.Linq;
-using static Unity.Collections.Unicode;
 
 namespace Managers
 {
@@ -14,7 +13,6 @@ namespace Managers
     {
         [Header("References")]
         [SerializeField] private Transform finishLine;
-        [SerializeField] private BlockerManager blockerManager;
         [SerializeField] private Transform[] spawnPositions;
 
         [Header("Prefabs")]
@@ -26,7 +24,7 @@ namespace Managers
         [Header("Settings")]
         [SerializeField] private int minPlayers = 2;
 
-        private RacePositionManager _racePositionManager;
+        private ScoreManager _scoreManager;
         private TimerManager _timerManager;
         private GameOverManager _gameOverManager;
         
@@ -100,21 +98,21 @@ namespace Managers
         {
             if (runner.IsServer)
             {
-                _racePositionManager = FindFirstObjectByType<RacePositionManager>();
-                if (_racePositionManager == null)
+                _scoreManager = FindFirstObjectByType<ScoreManager>();
+                if (_scoreManager == null)
                 {
-                    _racePositionManager = runner.Spawn(racePositionManagerPrefab, Vector3.zero, Quaternion.identity)
-                                                .GetComponent<RacePositionManager>();
+                    _scoreManager = runner.Spawn(racePositionManagerPrefab, Vector3.zero, Quaternion.identity)
+                                                .GetComponent<ScoreManager>();
                 }
 
-                _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab, _racePositionManager, finishLine);
+                _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab, _scoreManager, finishLine);
                 _playerSpawner.SpawnPlayer(runner, player);
 
                 if (runner.ActivePlayers.Count() >= minPlayers)
                 {
                     var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
                     _timerManager = timerObj.GetComponent<TimerManager>();
-                    _timerManager.StartRaceCountdown(blockerManager);
+                    _timerManager.StartRaceCountdown();
 
                     var gameOverManagerObj = runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity);
                     _gameOverManager = gameOverManagerObj.GetComponent<GameOverManager>();

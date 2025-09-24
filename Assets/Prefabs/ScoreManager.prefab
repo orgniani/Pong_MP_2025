@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 1423374153775586476}
   - component: {fileID: 2675253394143533424}
   m_Layer: 0
-  m_Name: RacePositionManager
+  m_Name: ScoreManager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -61,6 +61,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 2443898556546841768}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ff8de3d9555ee2342aaae515235d1ac6, type: 3}
+  m_Script: {fileID: 11500000, guid: 77c3e72ed64cf0548bd2536e53d3e81a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 

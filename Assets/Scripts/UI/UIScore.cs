@@ -5,26 +5,26 @@ using TMPro;
 
 namespace UI
 {
-    public class UIRacePositions
+    public class UIScore
     {
-        private RacePositionManager _racePositionManager;
+        private ScoreManager _scoreManager;
         private TMP_Text _racePositionsText;
         private TMP_Text _winnersText;
 
-        public UIRacePositions(RacePositionManager racePositionManager, TMP_Text racePositionsText, TMP_Text winnersText)
+        public UIScore(ScoreManager scoreManager, TMP_Text racePositionsText, TMP_Text winnersText)
         {
-            _racePositionManager = racePositionManager;
+            _scoreManager = scoreManager;
             _racePositionsText = racePositionsText;
             _winnersText = winnersText;
         }
 
         public void UpdateRacePositions()
         {
-            if (_racePositionManager == null || _racePositionManager.Object == null)
+            if (_scoreManager == null || _scoreManager.Object == null)
                 return;
 
 
-            var playerOrder = _racePositionManager.GetCurrentPlayerOrder();
+            var playerOrder = _scoreManager.GetCurrentPlayerScore();
             if (playerOrder.Count == 0) return;
 
             StringBuilder sb = new StringBuilder();
@@ -41,10 +41,10 @@ namespace UI
 
         public void UpdateWinners()
         {
-            if (_racePositionManager == null || _racePositionManager.Object == null)
+            if (_scoreManager == null || _scoreManager.Object == null)
                 return;
 
-            var winners = _racePositionManager.GetWinnersOrder();
+            var winners = _scoreManager.GetWinnersOrder();
             if (winners.Count == 0)
             {
                 _winnersText.text = "No winners yet!";

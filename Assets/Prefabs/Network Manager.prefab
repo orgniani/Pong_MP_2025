@@ -45,10 +45,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   isPersistent: 1
-  playerPrefab:
-    RawGuidValue: 6dc8f66d442feca428e002d47d36a8ca
+  finishLine: {fileID: 0}
+  blockerManager: {fileID: 0}
   spawnPositions:
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
   - {fileID: 0}
+  playerPrefab:
+    RawGuidValue: 00000000000000000000000000000000
+  timerManagerPrefab:
+    RawGuidValue: 00000000000000000000000000000000
+  racePositionManagerPrefab:
+    RawGuidValue: 00000000000000000000000000000000
+  gameOverManagerPrefab:
+    RawGuidValue: 00000000000000000000000000000000
+  minPlayers: 2

@@ -30,11 +30,11 @@ namespace UI
         [SerializeField] private int mainMenuBuildIndex = 0;
 
         private TimerManager _timerManager;
-        private RacePositionManager _racePositionManager;
+        private ScoreManager _scoreManager;
         private GameOverManager _gameOverManager;
 
         private UITimer _uiTimer;
-        private UIRacePositions _uiRacePositions;
+        private UIScore _uiScore;
 
         private bool _unlockedWithEsc = false;
 
@@ -72,9 +72,9 @@ namespace UI
                 yield return null;
             }
 
-            while (_racePositionManager == null)
+            while (_scoreManager == null)
             {
-                _racePositionManager = FindFirstObjectByType<RacePositionManager>();
+                _scoreManager = FindFirstObjectByType<ScoreManager>();
                 yield return null;
             }
 
@@ -86,7 +86,7 @@ namespace UI
 
 
             _uiTimer = new UITimer(_timerManager, timerText);
-            _uiRacePositions = new UIRacePositions(_racePositionManager, racePositionsText, winnersText);
+            _uiScore = new UIScore(_scoreManager, racePositionsText, winnersText);
 
             StartCountdownVisual();
             UpdateWaitingStatus();
@@ -102,12 +102,12 @@ namespace UI
 
             TryRelockCursorOnClick();
 
-            if (_uiTimer == null || _uiRacePositions == null)
+            if (_uiTimer == null || _uiScore == null)
                 return;
 
             _uiTimer.UpdateTimer();
-            _uiRacePositions.UpdateRacePositions();
-            _uiRacePositions.UpdateWinners();
+            _uiScore.UpdateRacePositions();
+            _uiScore.UpdateWinners();
 
             CheckGameOver();
         }

@@ -25,19 +25,17 @@ namespace Managers
             }
         }
 
-        public void StartRaceCountdown(BlockerManager blockerManager)
+        public void StartRaceCountdown()
         {
             if (!HasStateAuthority || TimerRunning || _countdownCoroutine != null)
                 return;
 
-            _countdownCoroutine = StartCoroutine(CountdownCoroutine(blockerManager));
+            _countdownCoroutine = StartCoroutine(CountdownCoroutine());
         }
 
-        private IEnumerator CountdownCoroutine(BlockerManager blockerManager)
+        private IEnumerator CountdownCoroutine()
         {
             yield return new WaitForSeconds(3f);
-
-            blockerManager.Rpc_RemoveStartBlocker();
             TimerRunning = true;
         }
 

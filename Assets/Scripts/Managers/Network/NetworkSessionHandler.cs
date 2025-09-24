@@ -7,35 +7,35 @@ namespace Managers.Network
 {
     public class NetworkSessionHandler
     {
-        public async Task<bool> StartSession(NetworkRunner runner, GameMode gameMode, int maxPlayers)
-        {
-            StartGameArgs args = new StartGameArgs()
-            {
-                GameMode = gameMode,
-                PlayerCount = maxPlayers,
-                SceneManager = runner.gameObject.AddComponent<NetworkSceneManagerDefault>(),
-                SessionName = "RaceGame"
-            };
-
-            var result = await runner.StartGame(args);
-            Debug.Log($"Session started? {result.Ok}");
-            return result.Ok;
-        }
-
-        public async Task<bool> JoinOrCreateSession(NetworkRunner runner, int maxPlayers, int buildIndex)
+        public async Task<bool> StartServer(NetworkRunner runner, int maxPlayers, int buildIndex)
         {
             var args = new StartGameArgs()
             {
-                GameMode = GameMode.AutoHostOrClient,
+                GameMode = GameMode.Server,
+                PlayerCount = maxPlayers,
                 Scene = SceneRef.FromIndex(buildIndex),
                 SceneManager = runner.gameObject.AddComponent<NetworkSceneManagerDefault>(),
-                PlayerCount = maxPlayers
+                SessionName = "PongServer"
             };
 
             var result = await runner.StartGame(args);
-            Debug.Log($"Start game result: {result.Ok}");
+            Debug.Log($"Server started? {result.Ok}");
             return result.Ok;
         }
 
+        public async Task<bool> StartClient(NetworkRunner runner, string serverName, int buildIndex)
+        {
+            var args = new StartGameArgs()
+            {
+                GameMode = GameMode.Client,
+                Scene = SceneRef.FromIndex(buildIndex),
+                SceneManager = runner.gameObject.AddComponent<NetworkSceneManagerDefault>(),
+                SessionName = serverName
+            };
+
+            var result = await runner.StartGame(args);
+            Debug.Log($"Client joined? {result.Ok}");
+            return result.Ok;
+        }
     }
 }

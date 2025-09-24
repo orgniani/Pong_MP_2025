@@ -8,18 +8,18 @@ namespace Managers.Network
     {
         private readonly Transform[] _spawnPoints;
         private readonly NetworkPrefabRef _playerPrefab;
-        private readonly RacePositionManager _racePositionManager;
+        private readonly ScoreManager _scoreManager;
         private readonly Transform _finishLine;
 
         private readonly Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
 
         public int SpawnedPlayerCount => _spawnedPlayers.Count;
 
-        public NetworkPlayerSpawner(Transform[] spawnPoints, NetworkPrefabRef playerPrefab, RacePositionManager raceManager, Transform finishLine)
+        public NetworkPlayerSpawner(Transform[] spawnPoints, NetworkPrefabRef playerPrefab, ScoreManager scoreManager, Transform finishLine)
         {
             _spawnPoints = spawnPoints;
             _playerPrefab = playerPrefab;
-            _racePositionManager = raceManager;
+            _scoreManager = scoreManager;
             _finishLine = finishLine;
         }
 
@@ -29,8 +29,8 @@ namespace Managers.Network
             NetworkObject playerObj = runner.Spawn(_playerPrefab, spawnPos, Quaternion.identity, player);
             _spawnedPlayers.Add(player, playerObj);
 
-            _racePositionManager.RegisterPlayer(player, playerObj.transform);
-            _racePositionManager.SetFinishLine(_finishLine);
+            _scoreManager.RegisterPlayer(player, playerObj.transform);
+            _scoreManager.SetFinishLine(_finishLine);
         }
 
         public void DespawnPlayer(NetworkRunner runner, PlayerRef player)
@@ -38,7 +38,7 @@ namespace Managers.Network
             if (_spawnedPlayers.TryGetValue(player, out NetworkObject obj))
             {
                 runner.Despawn(obj);
-                _racePositionManager.UnregisterPlayer(player);
+                _scoreManager.UnregisterPlayer(player);
                 _spawnedPlayers.Remove(player);
             }
         }

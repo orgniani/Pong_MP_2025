@@ -8,8 +8,10 @@ using TMPro;
 
 namespace UI
 {
-    public class UIMainMenuManager : MonoBehaviour
+    public class UIMainMenu : MonoBehaviour
     {
+        [SerializeField] private GameObject waitingRoom;
+
         [SerializeField] private Button joinButton;
         [SerializeField] private Button quitButton;
         [SerializeField] private GameObject loadingPanel;
@@ -72,18 +74,20 @@ namespace UI
             _networkRunner = runnerObj.GetComponent<NetworkRunner>();
             _networkRunner.ProvideInput = true;
 
-            bool success = await _sessionHandler.JoinOrCreateSession(_networkRunner, 4, raceSceneBuildIndex);
+            bool success = await _sessionHandler.StartClient(_networkRunner, "PongServer", raceSceneBuildIndex);
 
             if (!success)
             {
-                Debug.LogError("Could not connect or create a session.");
+                Debug.LogError("Could not connect to the server.");
                 joinButton.interactable = true;
                 loadingPanel.SetActive(false);
             }
             else
             {
                 Debug.Log("Connected successfully! Loading game...");
+                waitingRoom.SetActive(true);
             }
         }
+
     }
 }

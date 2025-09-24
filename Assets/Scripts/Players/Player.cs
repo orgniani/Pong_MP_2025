@@ -1,61 +1,39 @@
+using Fusion;
 using UnityEngine;
 
 namespace Players
 {
     [RequireComponent(typeof(Collider2D))]
-    public class Player : MonoBehaviour
+    public class Player : NetworkBehaviour
     {
-        [Header("Config")]
         [SerializeField] private float speed = 8f;
-        [SerializeField] private bool useWASD = true;
+        [SerializeField] private SpriteRenderer parentRenderer;
 
-        private float _moveInput;
         private float _halfHeight;
         private float _halfWidth;
-
-        private SpriteRenderer _parentRenderer;
 
         private void Awake()
         {
             var col = GetComponent<Collider2D>();
             _halfHeight = col.bounds.extents.y;
             _halfWidth = col.bounds.extents.x;
-
-            _parentRenderer = transform.parent.GetComponent<SpriteRenderer>();
-            if (_parentRenderer == null)
-                Debug.LogError("[Player] Parent does not have a SpriteRenderer!");
         }
 
-        private void Update()
+        public override void FixedUpdateNetwork()
         {
-            if (useWASD)
+            if (GetInput<PlayerInputData>(out var input))
             {
-                if (Input.GetKey(KeyCode.W))
-                    _moveInput = 1f;
-                else if (Input.GetKey(KeyCode.S))
-                    _moveInput = -1f;
-                else
-                    _moveInput = 0f;
-            }
-            else
-            {
-                if (Input.GetKey(KeyCode.UpArrow))
-                    _moveInput = 1f;
-                else if (Input.GetKey(KeyCode.DownArrow))
-                    _moveInput = -1f;
-                else
-                    _moveInput = 0f;
-            }
-
-            transform.Translate(-Vector3.right * _moveInput * speed * Time.deltaTime);
-
-            if (_parentRenderer != null)
+                Vector3 move = Vector3.up * input.MoveY * speed * Runner.DeltaTime;
+                transform.position += move;
                 ClampToParentBounds();
+            }
         }
 
         private void ClampToParentBounds()
         {
-            Bounds bounds = _parentRenderer.bounds;
+            if (!parentRenderer) return;
+
+            Bounds bounds = parentRenderer.bounds;
             Vector3 pos = transform.position;
 
             float minX = bounds.min.x + _halfWidth;

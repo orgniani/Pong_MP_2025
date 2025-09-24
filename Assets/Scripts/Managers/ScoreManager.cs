@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Managers
 {
-    public class RacePositionManager : NetworkBehaviour
+    public class ScoreManager : NetworkBehaviour
     {
         private Transform _finishLine;
 
@@ -37,7 +37,7 @@ namespace Managers
             _playersFinished.Remove(player);
         }
 
-        public List<PlayerRef> GetCurrentPlayerOrder()
+        public List<PlayerRef> GetCurrentPlayerScore()
         {
             var players = new List<PlayerRef>();
             for (int i = 0; i < _playerOrder.Length; i++)
@@ -54,7 +54,7 @@ namespace Managers
             if (!HasStateAuthority) return;
 
             UpdateWinners();
-            UpdatePlayerPositions();
+            UpdateScore();
         }
 
         private void UpdateWinners()
@@ -99,7 +99,7 @@ namespace Managers
             return winners;
         }
 
-        private void UpdatePlayerPositions()
+        private void UpdateScore()
         {
             var activePlayers = new List<(PlayerRef player, float distance)>();
 
