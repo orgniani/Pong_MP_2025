@@ -21,6 +21,11 @@ namespace Players
 
         public override void FixedUpdateNetwork()
         {
+            if (!Object.HasStateAuthority)
+            {
+                return;
+            }
+
             if (GetInput<PlayerInputData>(out var input))
             {
                 Vector3 move = Vector3.up * input.MoveY * speed * Runner.DeltaTime;

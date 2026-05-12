@@ -74,7 +74,7 @@ namespace UI
             _networkRunner = runnerObj.GetComponent<NetworkRunner>();
             _networkRunner.ProvideInput = true;
 
-            bool success = await _sessionHandler.StartClient(_networkRunner, "PongServer", raceSceneBuildIndex);
+            bool success = await _sessionHandler.StartClient(_networkRunner, NetworkSessionHandler.DefaultSessionName, raceSceneBuildIndex);
 
             if (!success)
             {

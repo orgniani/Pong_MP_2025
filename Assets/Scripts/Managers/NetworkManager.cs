@@ -11,6 +11,7 @@ namespace Managers
 {
     public class NetworkManager : MonoBehaviourSingleton<NetworkManager>, INetworkRunnerCallbacks
     {
+        private const string LogPrefix = "[NetLifecycle]";
         [Header("References")]
         [SerializeField] private Transform finishLine;
         [SerializeField] private Transform[] spawnPositions;
@@ -137,7 +138,7 @@ namespace Managers
 
         void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner)
         {
-            Debug.Log("Connected to server!");
+            Debug.Log($"{LogPrefix} connected: mode={runner.GameMode}, session='{runner.SessionInfo.Name}'");
 
             if (_networkRunner.IsClient)
                 OnConnected?.Invoke();
@@ -145,7 +146,7 @@ namespace Managers
 
         void INetworkRunnerCallbacks.OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
         {
-            Debug.LogWarning($"Disconnected from server: {reason}");
+            Debug.LogWarning($"{LogPrefix} disconnect reason: mode={runner.GameMode}, reason={reason}, session='{runner.SessionInfo.Name}'");
 
             if (_networkRunner.IsClient)
                 Shutdown();
@@ -153,7 +154,15 @@ namespace Managers
 
         void INetworkRunnerCallbacks.OnInput(NetworkRunner runner, NetworkInput input)
         {
-            //_inputHandler?.CollectInput(input);
+            if (!runner.IsClient || !runner.IsPlayerValid(runner.LocalPlayer))
+            {
+                return;
+            }
+
+            input.Set(new Players.PlayerInputData
+            {
+                MoveY = Input.GetAxisRaw("Vertical")
+            });
         }
 
         void INetworkRunnerCallbacks.OnInputMissing (NetworkRunner runner, PlayerRef player, NetworkInput input) { }
