@@ -1,6 +1,5 @@
 using Fusion;
 using Managers;
-using System.Text;
 using TMPro;
 
 namespace UI
@@ -23,20 +22,7 @@ namespace UI
             if (_scoreManager == null || _scoreManager.Object == null)
                 return;
 
-
-            var playerOrder = _scoreManager.GetCurrentPlayerScore();
-            if (playerOrder.Count == 0) return;
-
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("Positions:");
-
-            for (int i = 0; i < playerOrder.Count; i++)
-            {
-                string playerName = GetPlayerName(playerOrder[i]);
-                sb.AppendLine($"{i + 1} {playerName}");
-            }
-
-            _racePositionsText.text = sb.ToString();
+            _racePositionsText.text = $"LEFT {_scoreManager.LeftScore} - {_scoreManager.RightScore} RIGHT";
         }
 
         public void UpdateWinners()
@@ -44,36 +30,13 @@ namespace UI
             if (_scoreManager == null || _scoreManager.Object == null)
                 return;
 
-            var winners = _scoreManager.GetWinnersOrder();
-            if (winners.Count == 0)
+            if (_scoreManager.HasWinner(out var winnerLabel))
             {
-                _winnersText.text = "No winners yet!";
+                _winnersText.text = winnerLabel;
                 return;
             }
 
-            StringBuilder sb = new StringBuilder();
-            sb.AppendLine("WINNERS");
-
-            for (int i = 0; i < winners.Count; i++)
-            {
-                string playerName = GetPlayerName(winners[i]);
-                sb.AppendLine($"{i + 1} {playerName}");
-            }
-
-            _winnersText.text = sb.ToString();
-        }
-
-        private string GetPlayerName(PlayerRef player)
-        {
-            //if (NetworkPlayerSetup.PlayerNames.TryGetValue(player, out var name))
-            //{
-            //    if (!string.IsNullOrWhiteSpace(name))
-            //        return name;
-            //    else
-            //        return "Player_" + player.PlayerId;
-            //}
-
-            return "Player_" + player.PlayerId;
+            _winnersText.text = "Playing";
         }
     }
 }

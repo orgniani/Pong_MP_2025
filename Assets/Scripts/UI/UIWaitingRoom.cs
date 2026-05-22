@@ -2,14 +2,14 @@ using Fusion.Sockets;
 using Fusion;
 using UnityEngine;
 using System.Linq;
+using Config;
 
 
 namespace UI
 {
     public class UIWaitingRoom : MonoBehaviour, INetworkRunnerCallbacks
     {
-        [SerializeField] private int minPlayers = 2;
-        [SerializeField] private int gameSceneIndex = 2;
+        [SerializeField] private MatchRulesConfig matchRulesConfig;
 
         private NetworkRunner _runner;
 
@@ -24,11 +24,35 @@ namespace UI
         {
             Debug.Log($"Player {player.PlayerId} joined. Total: {runner.ActivePlayers.Count()}");
 
-            if (runner.IsServer && runner.ActivePlayers.Count() >= minPlayers)
+            var minPlayersToStart = ResolveMinPlayersToStart();
+            if (minPlayersToStart < 1)
+            {
+                return;
+            }
+
+            if (runner.IsServer && runner.ActivePlayers.Count() >= minPlayersToStart)
             {
                 Debug.Log("Min players reached, starting game!");
-                runner.LoadScene(SceneRef.FromIndex(gameSceneIndex));
+                var resolvedGameSceneIndex = SceneCatalog.GetGameIndex();
+                if (resolvedGameSceneIndex < 0)
+                {
+                    Debug.LogError("Could not resolve game scene index from SceneIndexCatalog.");
+                    return;
+                }
+
+                runner.LoadScene(SceneRef.FromIndex(resolvedGameSceneIndex));
             }
+        }
+
+        private int ResolveMinPlayersToStart()
+        {
+            if (matchRulesConfig == null)
+            {
+                Debug.LogError("[UIWaitingRoom] MatchRulesConfig is missing. Cannot evaluate start condition.");
+                return -1;
+            }
+
+            return matchRulesConfig.ResolveMinPlayersToStart();
         }
 
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }

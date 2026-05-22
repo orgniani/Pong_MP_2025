@@ -7,7 +7,13 @@ namespace Managers
 {
     public class ScoreManager : NetworkBehaviour
     {
+        [Header("Pong score")]
+        [SerializeField] private int pointsToWin = 5;
+
         private Transform _finishLine;
+
+        [Networked] public int LeftScore { get; private set; }
+        [Networked] public int RightScore { get; private set; }
 
         [Networked, Capacity(4)]
         private NetworkArray<PlayerRef> _playerOrder => default;
@@ -19,6 +25,8 @@ namespace Managers
         private readonly HashSet<PlayerRef> _playersFinished = new();
 
         public event Action<PlayerRef> OnPlayerFinished;
+
+        public event Action<int, int> OnScoreChanged;
 
         public void SetFinishLine(Transform finishLine)
         {
@@ -55,6 +63,50 @@ namespace Managers
 
             UpdateWinners();
             UpdateScore();
+        }
+
+        public void RegisterLeftGoal()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            LeftScore++;
+            OnScoreChanged?.Invoke(LeftScore, RightScore);
+        }
+
+        public void RegisterRightGoal()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            RightScore++;
+            OnScoreChanged?.Invoke(LeftScore, RightScore);
+        }
+
+        public bool HasWinner(out string winnerLabel)
+        {
+            if (LeftScore >= pointsToWin && LeftScore > RightScore)
+            {
+                winnerLabel = "Left Player Wins";
+                return true;
+            }
+
+            if (RightScore >= pointsToWin && RightScore > LeftScore)
+            {
+                winnerLabel = "Right Player Wins";
+                return true;
+            }
+
+            winnerLabel = string.Empty;
+            return false;
+        }
+
+        public string GetMatchResultLabel()
+        {
+            if (LeftScore == RightScore)
+                return "Draw";
+
+            return LeftScore > RightScore ? "Left Player Wins" : "Right Player Wins";
         }
 
         private void UpdateWinners()

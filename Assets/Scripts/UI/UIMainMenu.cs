@@ -5,20 +5,16 @@ using Managers.Network;
 using Fusion;
 using System.Collections;
 using TMPro;
+using Config;
 
 namespace UI
 {
     public class UIMainMenu : MonoBehaviour
     {
-        [SerializeField] private GameObject waitingRoom;
-
         [SerializeField] private Button joinButton;
         [SerializeField] private Button quitButton;
         [SerializeField] private GameObject loadingPanel;
         [SerializeField] private TMP_InputField usernameInputField;
-
-        [Header("Build Index of Game Scene")]
-        [SerializeField] private int raceSceneBuildIndex = 1;
 
         private NetworkSessionHandler _sessionHandler;
         private NetworkRunner _networkRunner;
@@ -74,7 +70,16 @@ namespace UI
             _networkRunner = runnerObj.GetComponent<NetworkRunner>();
             _networkRunner.ProvideInput = true;
 
-            bool success = await _sessionHandler.StartClient(_networkRunner, NetworkSessionHandler.DefaultSessionName, raceSceneBuildIndex);
+            var lobbySceneIndex = SceneCatalog.GetLobbyIndex();
+            if (lobbySceneIndex < 0)
+            {
+                Debug.LogError("Could not resolve lobby scene index from SceneIndexCatalog.");
+                joinButton.interactable = true;
+                loadingPanel.SetActive(false);
+                return;
+            }
+
+            bool success = await _sessionHandler.StartClient(_networkRunner, NetworkSessionHandler.DefaultSessionName, lobbySceneIndex);
 
             if (!success)
             {
@@ -84,8 +89,7 @@ namespace UI
             }
             else
             {
-                Debug.Log("Connected successfully! Loading game...");
-                waitingRoom.SetActive(true);
+                Debug.Log("Connected successfully! Fusion will load the Lobby scene from the server.");
             }
         }
 

@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using Helpers;
 using Managers.Network;
+using Config;
 
 namespace UI
 {
@@ -25,9 +26,6 @@ namespace UI
         [Header("Buttons")]
         [SerializeField] private Button menuButton;
         [SerializeField] private Button quitButton;
-
-        [Header("Main menu build index")]
-        [SerializeField] private int mainMenuBuildIndex = 0;
 
         private TimerManager _timerManager;
         private ScoreManager _scoreManager;
@@ -129,7 +127,7 @@ namespace UI
 
                 CursorLocker.Unlock();
                 gameOverCanvas.SetActive(true);
-                finalWinnersText.text = winnersText.text;
+                finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : winnersText.text;
             }
         }
 
@@ -137,12 +135,19 @@ namespace UI
         {
             CursorLocker.Unlock();
             gameOverCanvas.SetActive(true);
-            finalWinnersText.text = winnersText.text;
+            finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : winnersText.text;
         }
 
         private void ReturnToMainMenu()
         {
-            UnityEngine.SceneManagement.SceneManager.LoadScene(mainMenuBuildIndex);
+            var resolvedMainMenuBuildIndex = SceneCatalog.GetMainMenuIndex(-1);
+            if (resolvedMainMenuBuildIndex < 0)
+            {
+                Debug.LogError("[UIManager] Could not resolve MainMenu scene index from SceneCatalog.");
+                return;
+            }
+
+            UnityEngine.SceneManagement.SceneManager.LoadScene(resolvedMainMenuBuildIndex);
         }
 
         private void StartCountdownVisual()

@@ -6,6 +6,7 @@ using Fusion.Sockets;
 using Common;
 using Managers.Network;
 using System.Linq;
+using Balls;
 
 namespace Managers
 {
@@ -34,6 +35,7 @@ namespace Managers
         private NetworkRunner _networkRunner;
         private NetworkPlayerSpawner _playerSpawner;
         private NetworkInputHandler _inputHandler;
+        private bool _ballGoalCallbacksBound;
 
         public event Action OnConnected;
         public event Action OnDisconnected;
@@ -109,12 +111,17 @@ namespace Managers
                 _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab, _scoreManager, finishLine);
                 _playerSpawner.SpawnPlayer(runner, player);
 
-                if (runner.ActivePlayers.Count() >= minPlayers)
+                TryBindBallGoalCallbacks();
+
+                if (runner.ActivePlayers.Count() >= minPlayers && _timerManager == null)
                 {
                     var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
                     _timerManager = timerObj.GetComponent<TimerManager>();
                     _timerManager.StartRaceCountdown();
+                }
 
+                if (runner.ActivePlayers.Count() >= minPlayers && _gameOverManager == null)
+                {
                     var gameOverManagerObj = runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity);
                     _gameOverManager = gameOverManagerObj.GetComponent<GameOverManager>();
                 }
@@ -178,5 +185,19 @@ namespace Managers
         void INetworkRunnerCallbacks.OnObjectEnterAOI (NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
         void INetworkRunnerCallbacks.OnReliableDataReceived (NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
         void INetworkRunnerCallbacks.OnReliableDataProgress (NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
+
+        private void TryBindBallGoalCallbacks()
+        {
+            if (_ballGoalCallbacksBound || _scoreManager == null)
+                return;
+
+            var ball = FindFirstObjectByType<Ball>();
+            if (ball == null)
+                return;
+
+            ball.onLeftGoal.AddListener(_scoreManager.RegisterRightGoal);
+            ball.onRightGoal.AddListener(_scoreManager.RegisterLeftGoal);
+            _ballGoalCallbacksBound = true;
+        }
     }
 }
