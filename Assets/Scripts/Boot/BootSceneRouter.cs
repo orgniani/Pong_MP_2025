@@ -1,6 +1,6 @@
 using System.Collections;
-using System;
 using Config;
+using Helpers;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,9 +12,12 @@ namespace Boot
 
         private IEnumerator Start()
         {
-            var targetSceneBuildIndex = HasDedicatedFlag()
-                ? SceneCatalog.GetLobbyIndex()
-                : SceneCatalog.GetMainMenuIndex();
+            if (DedicatedServerEnvironment.HasDedicatedFlag())
+            {
+                yield break;
+            }
+
+            var targetSceneBuildIndex = SceneCatalog.GetMainMenuIndex();
 
             if (targetSceneBuildIndex < 0)
             {
@@ -33,14 +36,6 @@ namespace Boot
             }
 
             SceneManager.LoadScene(targetSceneBuildIndex);
-        }
-
-        private static bool HasDedicatedFlag()
-        {
-            var args = Environment.GetCommandLineArgs();
-            return Array.Exists(args, arg =>
-                string.Equals(arg, "-dedicated", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(arg, "-dedicatedServer", StringComparison.OrdinalIgnoreCase));
         }
     }
 }

@@ -44,7 +44,6 @@ namespace Managers
 
         public NetworkPlayerSpawner PlayerSpawner => _playerSpawner;
         public GameOverManager GameOverManager => _gameOverManager;
-        //public NetworkPlayerSetup LocalPlayer { get; set; }
 
         private void Awake()
         {
@@ -77,12 +76,6 @@ namespace Managers
             int index = player.PlayerId % spawnPositions.Length;
             return spawnPositions[index].position;
         }
-
-        //public void RegisterLocalPlayerInput(NetworkPlayerSetup localPlayer)
-        //{
-        //    LocalPlayer = localPlayer;
-        //    _inputHandler = new NetworkInputHandler(localPlayer);
-        //}
 
         void INetworkRunnerCallbacks.OnShutdown (NetworkRunner runner, ShutdownReason shutdownReason)
         {

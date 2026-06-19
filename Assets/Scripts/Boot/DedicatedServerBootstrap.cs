@@ -1,6 +1,7 @@
 using Fusion;
 using System;
 using Config;
+using Helpers;
 using Managers.Network;
 using UnityEngine;
 
@@ -24,6 +25,7 @@ namespace Boot
             var runnerObj = new GameObject("NetworkRunner", typeof(NetworkRunner));
             var runner = runnerObj.GetComponent<NetworkRunner>();
             runner.ProvideInput = false;
+            runner.AddCallbacks(new DedicatedServerMatchFlow(matchRulesConfig));
 
             var sessionHandler = new NetworkSessionHandler();
             var lobbySceneIndex = SceneCatalog.GetLobbyIndex();
@@ -89,11 +91,7 @@ namespace Boot
 
         private bool ShouldStartDedicatedServer()
         {
-            var hasDedicated = HasDedicatedFlag();
-            var args = Environment.GetCommandLineArgs();
-            var hasBatchModeArg = Array.Exists(args, arg => string.Equals(arg, "-batchmode", StringComparison.OrdinalIgnoreCase));
-
-            if (!hasDedicated)
+            if (!DedicatedServerEnvironment.HasDedicatedFlag())
             {
                 Debug.Log("DedicatedServerBootstrap requires '-dedicated' or '-dedicatedServer' flag to start server mode.");
                 return false;
@@ -105,18 +103,10 @@ namespace Boot
                 return true;
             }
 
-            return Application.isBatchMode || hasBatchModeArg;
+            return DedicatedServerEnvironment.IsHeadless;
 #else
-            return Application.isBatchMode || hasBatchModeArg;
+            return DedicatedServerEnvironment.IsHeadless;
 #endif
-        }
-
-        private static bool HasDedicatedFlag()
-        {
-            var args = Environment.GetCommandLineArgs();
-            return Array.Exists(args, arg =>
-                string.Equals(arg, "-dedicated", StringComparison.OrdinalIgnoreCase) ||
-                string.Equals(arg, "-dedicatedServer", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string GetArgumentValue(string[] args, string key)

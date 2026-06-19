@@ -131,5 +131,17 @@ namespace Managers.Network
             Debug.Log($"{LogPrefix} client connect result: ok={result.Ok}, session='{sessionName}'");
             return result.Ok;
         }
+
+        public async Task<bool> JoinLobbyAsync(NetworkRunner runner, SessionLobby lobby = SessionLobby.ClientServer)
+        {
+            runner.ProvideInput = false;
+
+            Debug.Log($"{LogPrefix} joining session lobby: lobby='{lobby}'");
+
+            var result = await runner.JoinSessionLobby(lobby);
+
+            Debug.Log($"{LogPrefix} join lobby result: ok={result.Ok}");
+            return result.Ok;
+        }
     }
 }
