@@ -9,6 +9,7 @@ namespace UI
         [SerializeField] private Button play1v1Button;
         [SerializeField] private Button play2v2Button;
         [SerializeField] private Button creditsButton;
+        [SerializeField] private Button closeCreditsButton;
         [SerializeField] private Button quitButton;
         [SerializeField] private TMP_InputField usernameInputField;
         [SerializeField] private UISessionBrowser sessionBrowser;
@@ -32,6 +33,7 @@ namespace UI
             play1v1Button.onClick.AddListener(OnPlay1v1Clicked);
             play2v2Button.onClick.AddListener(OnPlay2v2Clicked);
             creditsButton.onClick.AddListener(OnCreditsClicked);
+            if (closeCreditsButton != null) closeCreditsButton.onClick.AddListener(OnCloseCreditsClicked);
             quitButton.onClick.AddListener(QuitGame);
 
             if (creditsPanel != null) creditsPanel.SetActive(false);
@@ -52,6 +54,11 @@ namespace UI
         private void OnCreditsClicked()
         {
             if (creditsPanel != null) creditsPanel.SetActive(true);
+        }
+
+        private void OnCloseCreditsClicked()
+        {
+            if (creditsPanel != null) creditsPanel.SetActive(false);
         }
 
         private void QuitGame()
@@ -82,6 +89,7 @@ namespace UI
             if (play1v1Button != null) play1v1Button.onClick.RemoveListener(OnPlay1v1Clicked);
             if (play2v2Button != null) play2v2Button.onClick.RemoveListener(OnPlay2v2Clicked);
             if (creditsButton != null) creditsButton.onClick.RemoveListener(OnCreditsClicked);
+            if (closeCreditsButton != null) closeCreditsButton.onClick.RemoveListener(OnCloseCreditsClicked);
             if (quitButton != null) quitButton.onClick.RemoveListener(QuitGame);
         }
 
