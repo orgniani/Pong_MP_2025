@@ -19,11 +19,11 @@ namespace Balls
             _speedIncreasePerSecond = speedIncreasePerSecond;
         }
 
-        public void Tick()
+        public void Tick(float deltaTime)
         {
             if (_rb.linearVelocity == Vector2.zero) return;
 
-            _currentSpeed += _speedIncreasePerSecond * Time.fixedDeltaTime;
+            _currentSpeed += _speedIncreasePerSecond * deltaTime;
 
             Vector2 dir = _rb.linearVelocity.normalized;
             _rb.linearVelocity = dir * _currentSpeed;

@@ -4,6 +4,7 @@ using UnityEngine;
 using Fusion;
 using Fusion.Sockets;
 using Common;
+using Config;
 using Managers.Network;
 using System.Linq;
 using Balls;
@@ -19,11 +20,11 @@ namespace Managers
         [Header("Prefabs")]
         [SerializeField] private NetworkPrefabRef playerPrefab;
         [SerializeField] private NetworkPrefabRef timerManagerPrefab;
-        [SerializeField] private NetworkPrefabRef racePositionManagerPrefab;
+        [SerializeField] private NetworkPrefabRef scoreManagerPrefab;
         [SerializeField] private NetworkPrefabRef gameOverManagerPrefab;
 
         [Header("Settings")]
-        [SerializeField] private int minPlayers = 2;
+        [SerializeField] private MatchRulesConfig matchRulesConfig;
 
         private ScoreManager _scoreManager;
         private TimerManager _timerManager;
@@ -96,7 +97,7 @@ namespace Managers
                 _scoreManager = FindFirstObjectByType<ScoreManager>();
                 if (_scoreManager == null)
                 {
-                    _scoreManager = runner.Spawn(racePositionManagerPrefab, Vector3.zero, Quaternion.identity)
+                    _scoreManager = runner.Spawn(scoreManagerPrefab, Vector3.zero, Quaternion.identity)
                                                 .GetComponent<ScoreManager>();
                 }
 
@@ -105,14 +106,14 @@ namespace Managers
 
                 TryBindBallGoalCallbacks();
 
-                if (runner.ActivePlayers.Count() >= minPlayers && _timerManager == null)
+                if (runner.ActivePlayers.Count() >= matchRulesConfig.MinPlayersToStart && _timerManager == null)
                 {
                     var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
                     _timerManager = timerObj.GetComponent<TimerManager>();
                     _timerManager.StartMatchCountdown();
                 }
 
-                if (runner.ActivePlayers.Count() >= minPlayers && _gameOverManager == null)
+                if (runner.ActivePlayers.Count() >= matchRulesConfig.MinPlayersToStart && _gameOverManager == null)
                 {
                     var gameOverManagerObj = runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity);
                     _gameOverManager = gameOverManagerObj.GetComponent<GameOverManager>();
@@ -171,7 +172,42 @@ namespace Managers
         void INetworkRunnerCallbacks.OnSessionListUpdated (NetworkRunner runner, List<SessionInfo> sessionList) { }
         void INetworkRunnerCallbacks.OnCustomAuthenticationResponse (NetworkRunner runner, Dictionary<string, object> data) { }
         void INetworkRunnerCallbacks.OnHostMigration (NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-        void INetworkRunnerCallbacks.OnSceneLoadDone (NetworkRunner runner) { }
+        void INetworkRunnerCallbacks.OnSceneLoadDone(NetworkRunner runner)
+        {
+            if (!runner.IsServer) return;
+
+            _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab);
+
+            foreach (var player in runner.ActivePlayers)
+            {
+                if (_playerSpawner.IsSpawned(player)) continue;
+
+                _playerSpawner.SpawnPlayer(runner, player);
+            }
+
+            TryBindBallGoalCallbacks();
+
+            if (_scoreManager == null)
+            {
+                _scoreManager = FindFirstObjectByType<ScoreManager>();
+                if (_scoreManager == null)
+                    _scoreManager = runner.Spawn(scoreManagerPrefab, Vector3.zero, Quaternion.identity)
+                                         .GetComponent<ScoreManager>();
+            }
+
+            if (_timerManager == null)
+            {
+                var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
+                _timerManager = timerObj.GetComponent<TimerManager>();
+                _timerManager.StartMatchCountdown();
+            }
+
+            if (_gameOverManager == null)
+            {
+                var gameOverManagerObj = runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity);
+                _gameOverManager = gameOverManagerObj.GetComponent<GameOverManager>();
+            }
+        }
         void INetworkRunnerCallbacks.OnSceneLoadStart (NetworkRunner runner) { }
         void INetworkRunnerCallbacks.OnObjectExitAOI (NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
         void INetworkRunnerCallbacks.OnObjectEnterAOI (NetworkRunner runner, NetworkObject obj, PlayerRef player) { }

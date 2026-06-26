@@ -1,70 +1,109 @@
+using Fusion;
 using UnityEngine;
 using UnityEngine.Events;
 
 namespace Balls
 {
     [RequireComponent(typeof(Rigidbody2D), typeof(Collider2D))]
-    public class Ball : MonoBehaviour
+    public class Ball : NetworkBehaviour
     {
         [Header("Config")]
         [SerializeField] private float startingSpeed = 5f;
         [SerializeField] private float minBounceAngle = 15f;
         [SerializeField] private float speedIncreasePerSecond = 0.2f;
+        [SerializeField] private float leftBoundX = -9f;
+        [SerializeField] private float rightBoundX = 9f;
 
         [Header("Events")]
         public UnityEvent onLeftGoal;
         public UnityEvent onRightGoal;
 
+        [Networked] public float SpeedMultiplier { get; set; } = 1f;
+        [Networked] private float _powerUpTimer { get; set; } = 0f;
+        [Networked] private NetworkRNG _rng { get; set; }
+
         private BallBounce _ballBounce;
         private BallGoal _ballGoal;
         private BallSpeed _ballSpeed;
-
         private Rigidbody2D _rb;
-        private float _currentSpeed;
 
         private void Awake()
         {
             _ballBounce = new BallBounce();
             _ballGoal = new BallGoal();
             _ballSpeed = new BallSpeed();
-
             _rb = GetComponent<Rigidbody2D>();
-            var col = GetComponent<Collider2D>();
 
             _ballBounce.Initialize(_rb, minBounceAngle);
-            _ballGoal.Initialize(_rb, onLeftGoal, onRightGoal, ResetBall);
+            _ballGoal.Initialize(_rb, leftBoundX, rightBoundX);
             _ballSpeed.Initialize(_rb, startingSpeed, speedIncreasePerSecond);
         }
 
-        private void Start()
+        public override void Spawned()
         {
-            _currentSpeed = startingSpeed;
-            ResetBall(Random.value > 0.5f);
+            _rb.bodyType = HasStateAuthority ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
+
+            if (!HasStateAuthority) return;
+
+            _rng = new NetworkRNG(42);
+            LaunchBall();
         }
 
-        private void FixedUpdate()
+        public override void FixedUpdateNetwork()
         {
-            _ballGoal.Tick();
-            _ballSpeed.Tick();
-        }
+            if (!HasStateAuthority) return;
 
-        private void ResetBall(bool toRight)
-        {
-            _ballSpeed.ResetSpeed();
+            _ballSpeed.Tick(Runner.DeltaTime);
 
-            _currentSpeed = startingSpeed;
-            _rb.position = Vector2.zero;
+            if (SpeedMultiplier != 1f)
+            {
+                Vector2 vel = _rb.linearVelocity;
+                _rb.linearVelocity = vel.normalized * (vel.magnitude * SpeedMultiplier);
 
-            float x = toRight ? 1f : -1f;
-            float y = Random.Range(-0.4f, 0.4f);
-            Vector2 dir = new Vector2(x, y).normalized;
+                _powerUpTimer -= Runner.DeltaTime;
+                if (_powerUpTimer <= 0f)
+                {
+                    _powerUpTimer = 0f;
+                    SpeedMultiplier = 1f;
+                }
+            }
 
-            _rb.linearVelocity = dir * _currentSpeed;
+            var result = _ballGoal.Tick();
+            if (result == GoalResult.LeftGoal)
+            {
+                onLeftGoal?.Invoke();
+                ResetBall();
+            }
+            else if (result == GoalResult.RightGoal)
+            {
+                onRightGoal?.Invoke();
+                ResetBall();
+            }
         }
 
         private void OnTriggerEnter2D(Collider2D other)
         {
+            if (!HasStateAuthority) return;
             _ballBounce.ReflectY();
+        }
+
+        private void LaunchBall()
+        {
+            _ballSpeed.ResetSpeed();
+            _rb.position = Vector2.zero;
+
+            var rng = _rng;
+            bool toRight = rng.NextSingle() > 0.5f;
+            float y = rng.RangeInclusive(-0.4f, 0.4f);
+            _rng = rng;
+
+            float x = toRight ? 1f : -1f;
+            _rb.linearVelocity = new Vector2(x, y).normalized * startingSpeed;
+        }
+
+        private void ResetBall()
+        {
+            LaunchBall();
         }
     }
 }

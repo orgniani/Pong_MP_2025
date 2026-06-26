@@ -13,6 +13,8 @@ namespace Managers.Network
 
         public int SpawnedPlayerCount => _spawnedPlayers.Count;
 
+        public bool IsSpawned(PlayerRef player) => _spawnedPlayers.ContainsKey(player);
+
         public NetworkPlayerSpawner(Transform[] spawnPoints, NetworkPrefabRef playerPrefab)
         {
             _spawnPoints = spawnPoints;
