@@ -25,7 +25,7 @@ namespace Managers
             }
         }
 
-        public void StartRaceCountdown()
+        public void StartMatchCountdown()
         {
             if (!HasStateAuthority || TimerRunning || _countdownCoroutine != null)
                 return;

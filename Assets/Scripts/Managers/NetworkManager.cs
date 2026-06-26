@@ -14,7 +14,6 @@ namespace Managers
     {
         private const string LogPrefix = "[NetLifecycle]";
         [Header("References")]
-        [SerializeField] private Transform finishLine;
         [SerializeField] private Transform[] spawnPositions;
 
         [Header("Prefabs")]
@@ -101,7 +100,7 @@ namespace Managers
                                                 .GetComponent<ScoreManager>();
                 }
 
-                _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab, _scoreManager, finishLine);
+                _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab);
                 _playerSpawner.SpawnPlayer(runner, player);
 
                 TryBindBallGoalCallbacks();
@@ -110,7 +109,7 @@ namespace Managers
                 {
                     var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
                     _timerManager = timerObj.GetComponent<TimerManager>();
-                    _timerManager.StartRaceCountdown();
+                    _timerManager.StartMatchCountdown();
                 }
 
                 if (runner.ActivePlayers.Count() >= minPlayers && _gameOverManager == null)

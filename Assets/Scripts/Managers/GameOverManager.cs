@@ -32,9 +32,9 @@ namespace Managers
                 return;
             }
 
-            if (_scoreManager != null && !_scoreManager.AreAnyActiveNonWinners())
+            if (_scoreManager != null && _scoreManager.HasWinner(out string winner))
             {
-                TriggerGameOver("All players finished or left");
+                TriggerGameOver(winner);
             }
         }
 
