@@ -13,19 +13,16 @@ namespace UI
     {
         [Header("Text")]
         [SerializeField] private TMP_Text timerText;
-        [SerializeField] private TMP_Text racePositionsText;
-        [SerializeField] private TMP_Text winnersText;
-        [SerializeField] private TMP_Text finalWinnersText;
+        [SerializeField] private TMP_Text scoreText;
         [SerializeField] private TMP_Text countdownText;
+        [SerializeField] private TMP_Text finalWinnersText;
 
         [Header("Game objects")]
-        [SerializeField] private GameObject waitingForPlayersPanel;
         [SerializeField] private GameObject countdownCanvas;
         [SerializeField] private GameObject gameOverCanvas;
 
         [Header("Buttons")]
         [SerializeField] private Button menuButton;
-        [SerializeField] private Button quitButton;
 
         private TimerManager _timerManager;
         private ScoreManager _scoreManager;
@@ -39,11 +36,9 @@ namespace UI
         private void OnEnable()
         {
             menuButton.onClick.AddListener(ReturnToMainMenu);
-            quitButton.onClick.AddListener(QuitGame);
 
-            gameOverCanvas.SetActive(false);
-            waitingForPlayersPanel.SetActive(true);
             countdownCanvas.SetActive(false);
+            gameOverCanvas.SetActive(false);
 
             if (NetworkManager.Instance)
                 NetworkManager.Instance.OnDisconnected += TriggerGameOver;
@@ -54,7 +49,6 @@ namespace UI
         private void OnDisable()
         {
             menuButton.onClick.RemoveListener(ReturnToMainMenu);
-            quitButton.onClick.RemoveListener(QuitGame);
 
             if (NetworkManager.Instance)
                 NetworkManager.Instance.OnDisconnected -= TriggerGameOver;
@@ -82,12 +76,11 @@ namespace UI
                 yield return null;
             }
 
+            _uiScore = new UIScore(_scoreManager, scoreText);
+
+            yield return StartCoroutine(CountdownRoutine());
 
             _uiTimer = new UITimer(_timerManager, timerText);
-            _uiScore = new UIScore(_scoreManager, racePositionsText, winnersText);
-
-            StartCountdownVisual();
-            UpdateWaitingStatus();
         }
 
         private void Update()
@@ -104,61 +97,14 @@ namespace UI
                 return;
 
             _uiTimer.UpdateTimer();
-            _uiScore.UpdateRacePositions();
-            _uiScore.UpdateWinners();
+            _uiScore.UpdateScore();
 
             CheckGameOver();
         }
 
-        private void UpdateWaitingStatus()
-        {
-            if (_timerManager == null) return;
-            waitingForPlayersPanel.SetActive(false);
-        }
-
-        private void CheckGameOver()
-        {
-            if(_gameOverManager == null || _gameOverManager.Object == null)
-                return;
-
-            if (_gameOverManager.IsGameOver && !gameOverCanvas.activeSelf)
-            {
-                Debug.Log("Client: Showing game over screen!");
-
-                CursorLocker.Unlock();
-                gameOverCanvas.SetActive(true);
-                finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : winnersText.text;
-            }
-        }
-
-        private void TriggerGameOver()
-        {
-            CursorLocker.Unlock();
-            gameOverCanvas.SetActive(true);
-            finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : winnersText.text;
-        }
-
-        private void ReturnToMainMenu()
-        {
-            var resolvedMainMenuBuildIndex = SceneCatalog.GetMainMenuIndex(-1);
-            if (resolvedMainMenuBuildIndex < 0)
-            {
-                Debug.LogError("[UIManager] Could not resolve MainMenu scene index from SceneCatalog.");
-                return;
-            }
-
-            UnityEngine.SceneManagement.SceneManager.LoadScene(resolvedMainMenuBuildIndex);
-        }
-
-        private void StartCountdownVisual()
-        {
-            countdownCanvas.SetActive(true);
-            StartCoroutine(CountdownRoutine());
-        }
-
         private IEnumerator CountdownRoutine()
         {
-            countdownText.gameObject.SetActive(true);
+            countdownCanvas.SetActive(true);
 
             countdownText.text = "3";
             yield return new WaitForSeconds(1f);
@@ -169,14 +115,49 @@ namespace UI
             countdownText.text = "1";
             yield return new WaitForSeconds(1f);
 
-            countdownCanvas.gameObject.SetActive(false);
+            countdownCanvas.SetActive(false);
+        }
+
+        private void CheckGameOver()
+        {
+            if (_gameOverManager == null || _gameOverManager.Object == null)
+                return;
+
+            if (_gameOverManager.IsGameOver && !gameOverCanvas.activeSelf)
+            {
+                CursorLocker.Unlock();
+                gameOverCanvas.SetActive(true);
+                finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty;
+            }
+        }
+
+        private void TriggerGameOver()
+        {
+            CursorLocker.Unlock();
+            gameOverCanvas.SetActive(true);
+            finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty;
+        }
+
+        private void ReturnToMainMenu()
+        {
+            if (NetworkManager.Instance)
+                NetworkManager.Instance.Shutdown();
+
+            var index = SceneCatalog.GetMainMenuIndex(-1);
+            if (index < 0)
+            {
+                Debug.LogError("[UIManager] Could not resolve MainMenu scene index.");
+                return;
+            }
+
+            UnityEngine.SceneManagement.SceneManager.LoadScene(index);
         }
 
         private void TryRelockCursorOnClick()
         {
             if (_unlockedWithEsc && Input.GetMouseButtonDown(0))
             {
-                if (!IsPointerOverButton(quitButton) && !IsPointerOverButton(menuButton))
+                if (!IsPointerOverButton(menuButton))
                 {
                     CursorLocker.Lock();
                     _unlockedWithEsc = false;
@@ -193,15 +174,6 @@ namespace UI
             if (rectTransform == null) return false;
 
             return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, Input.mousePosition, null);
-        }
-
-        private void QuitGame()
-        {
-#if UNITY_EDITOR
-            UnityEditor.EditorApplication.isPlaying = false;
-#else
-    Application.Quit();
-#endif
         }
     }
 }
