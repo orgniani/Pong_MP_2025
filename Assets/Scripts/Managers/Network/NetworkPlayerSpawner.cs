@@ -23,8 +23,20 @@ namespace Managers.Network
 
         public void SpawnPlayer(NetworkRunner runner, PlayerRef player)
         {
-            Vector3 spawnPos = _spawnPoints[_spawnedPlayers.Count % _spawnPoints.Length].position;
-            NetworkObject playerObj = runner.Spawn(_playerPrefab, spawnPos, Quaternion.identity, player);
+            int spawnIndex = _spawnedPlayers.Count % _spawnPoints.Length;
+            Transform spawnPoint = _spawnPoints[spawnIndex];
+
+            NetworkObject playerObj = runner.Spawn(
+                _playerPrefab,
+                spawnPoint.position,
+                spawnPoint.rotation,
+                player,
+                onBeforeSpawned: (r, obj) =>
+                {
+                    obj.GetComponent<Players.Player>().spawnPointIndex = spawnIndex;
+                }
+            );
+
             _spawnedPlayers.Add(player, playerObj);
         }
 

@@ -43,7 +43,6 @@ namespace UI
             if (NetworkManager.Instance)
                 NetworkManager.Instance.OnDisconnected += TriggerGameOver;
 
-            CursorLocker.Lock();
         }
 
         private void OnDisable()
@@ -159,7 +158,6 @@ namespace UI
             {
                 if (!IsPointerOverButton(menuButton))
                 {
-                    CursorLocker.Lock();
                     _unlockedWithEsc = false;
                 }
             }

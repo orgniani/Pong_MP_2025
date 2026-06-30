@@ -71,6 +71,11 @@ namespace Managers
                 _networkRunner.Shutdown();
         }
 
+        public Transform GetSpawnPoint(int index)
+        {
+            return spawnPositions[index % spawnPositions.Length];
+        }
+
         public Vector3 GetRespawnPoint(PlayerRef player)
         {
             int index = player.PlayerId % spawnPositions.Length;
@@ -128,9 +133,6 @@ namespace Managers
             if (runner.IsServer)
             {
                 _playerSpawner.DespawnPlayer(runner, player);
-
-                if (_playerSpawner.SpawnedPlayerCount == 0)
-                    Shutdown();
             }
 
             OnJoinedPlayerLeft?.Invoke("Player_" + player.PlayerId);
