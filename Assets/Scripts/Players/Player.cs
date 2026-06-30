@@ -31,13 +31,6 @@ namespace Players
                 transform.localScale = Vector3.one;
             }
 
-            Transform parent = transform.parent;
-            if (parent != null)
-                Debug.Log($"[Player] Spawned — parent='{parent.name}' parentWorldPos={parent.position} parentWorldRot={parent.rotation.eulerAngles} parentLossyScale={parent.lossyScale}");
-            else
-                Debug.LogWarning("[Player] Spawned — NO PARENT");
-
-            Debug.Log($"[Player] Spawned — localPos={transform.localPosition} localRot={transform.localRotation.eulerAngles} localScale={transform.localScale} worldPos={transform.position} worldRot={transform.rotation.eulerAngles}");
         }
 
         public override void FixedUpdateNetwork()

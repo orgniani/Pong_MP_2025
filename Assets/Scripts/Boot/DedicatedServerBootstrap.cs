@@ -1,5 +1,6 @@
 using Fusion;
 using System;
+using System.Threading.Tasks;
 using Config;
 using Helpers;
 using Managers.Network;
@@ -11,6 +12,7 @@ namespace Boot
     {
         [SerializeField] private MatchRulesConfig matchRulesConfig;
         [SerializeField] private bool allowNonHeadlessStartInEditor = true;
+        [SerializeField] private float restartDelaySec = 2f;
 
         private const string SessionPrefix = "PongServer";
 
@@ -22,12 +24,10 @@ namespace Boot
                 return;
             }
 
-            var runnerObj = new GameObject("NetworkRunner", typeof(NetworkRunner));
-            var runner = runnerObj.GetComponent<NetworkRunner>();
-            runner.ProvideInput = false;
-            runner.AddCallbacks(new DedicatedServerMatchFlow(matchRulesConfig));
+            var options = BuildServerOptions();
+            if (options == null)
+                return;
 
-            var sessionHandler = new NetworkSessionHandler();
             var lobbySceneIndex = SceneCatalog.GetLobbyIndex();
             if (lobbySceneIndex < 0)
             {
@@ -35,13 +35,36 @@ namespace Boot
                 return;
             }
 
-            var options = BuildServerOptions();
-            if (options == null)
+            while (true)
             {
+                await RunServerSession(options, lobbySceneIndex);
+                Debug.Log($"[DedicatedServerBootstrap] Session ended. Restarting in {restartDelaySec}s...");
+                await Task.Delay(TimeSpan.FromSeconds(restartDelaySec));
+            }
+        }
+
+        private async Task RunServerSession(DedicatedServerOptions options, int lobbySceneIndex)
+        {
+            var runnerObj = new GameObject("NetworkRunner", typeof(NetworkRunner));
+            DontDestroyOnLoad(runnerObj);
+            var runner = runnerObj.GetComponent<NetworkRunner>();
+            runner.ProvideInput = false;
+
+            var shutdownTcs = new TaskCompletionSource<ShutdownReason>();
+            runner.AddCallbacks(new DedicatedServerMatchFlow(matchRulesConfig, shutdownTcs));
+
+            var sessionHandler = new NetworkSessionHandler();
+            var ok = await sessionHandler.StartServer(runner, options.MaxPlayers, lobbySceneIndex, options.SessionName, options.Region, options.Port);
+            if (!ok)
+            {
+                Destroy(runnerObj);
                 return;
             }
 
-            await sessionHandler.StartServer(runner, options.MaxPlayers, lobbySceneIndex, options.SessionName, options.Region, options.Port);
+            await shutdownTcs.Task;
+
+            if (runnerObj != null)
+                Destroy(runnerObj);
         }
 
         private DedicatedServerOptions BuildServerOptions()

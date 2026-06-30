@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Config;
 using Fusion;
 using Fusion.Sockets;
@@ -11,11 +12,13 @@ namespace Managers.Network
     public sealed class DedicatedServerMatchFlow : INetworkRunnerCallbacks
     {
         private readonly MatchRulesConfig _matchRulesConfig;
+        private readonly TaskCompletionSource<ShutdownReason> _shutdownTcs;
         private bool _matchStarted;
 
-        public DedicatedServerMatchFlow(MatchRulesConfig matchRulesConfig)
+        public DedicatedServerMatchFlow(MatchRulesConfig matchRulesConfig, TaskCompletionSource<ShutdownReason> shutdownTcs = null)
         {
             _matchRulesConfig = matchRulesConfig;
+            _shutdownTcs = shutdownTcs;
         }
 
         public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
@@ -54,7 +57,10 @@ namespace Managers.Network
         }
 
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
-        public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
+        public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
+        {
+            _shutdownTcs?.TrySetResult(shutdownReason);
+        }
         public void OnConnectedToServer(NetworkRunner runner) { }
         public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
         public void OnInput(NetworkRunner runner, NetworkInput input) { }
