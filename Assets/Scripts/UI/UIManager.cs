@@ -6,6 +6,7 @@ using UnityEngine.UI;
 using Helpers;
 using Managers.Network;
 using Config;
+using Players;
 
 namespace UI
 {
@@ -24,6 +25,9 @@ namespace UI
         [Header("Buttons")]
         [SerializeField] private Button menuButton;
 
+        [Header("Config")]
+        [SerializeField] private MatchRulesConfig matchRulesConfig;
+
         private TimerManager _timerManager;
         private ScoreManager _scoreManager;
         private GameOverManager _gameOverManager;
@@ -33,6 +37,15 @@ namespace UI
 
         private bool _unlockedWithEsc = false;
 
+        private void Awake()
+        {
+            if (!matchRulesConfig)
+            {
+                Debug.LogError("[UIManager] MatchRulesConfig is missing.", this);
+                enabled = false;
+            }
+        }
+
         private void OnEnable()
         {
             menuButton.onClick.AddListener(ReturnToMainMenu);
@@ -41,8 +54,13 @@ namespace UI
             gameOverCanvas.SetActive(false);
 
             if (NetworkManager.Instance)
+            {
                 NetworkManager.Instance.OnDisconnected += TriggerGameOver;
+                NetworkManager.Instance.OnNewPlayerJoined += HandleRosterChanged;
+                NetworkManager.Instance.OnJoinedPlayerLeft += HandleRosterChanged;
+            }
 
+            Player.OnAnyUsernameChanged += HandleUsernameChanged;
         }
 
         private void OnDisable()
@@ -50,7 +68,13 @@ namespace UI
             menuButton.onClick.RemoveListener(ReturnToMainMenu);
 
             if (NetworkManager.Instance)
+            {
                 NetworkManager.Instance.OnDisconnected -= TriggerGameOver;
+                NetworkManager.Instance.OnNewPlayerJoined -= HandleRosterChanged;
+                NetworkManager.Instance.OnJoinedPlayerLeft -= HandleRosterChanged;
+            }
+
+            Player.OnAnyUsernameChanged -= HandleUsernameChanged;
 
             CursorLocker.Unlock();
         }
@@ -76,10 +100,10 @@ namespace UI
             }
 
             _uiScore = new UIScore(_scoreManager, scoreText);
+            _uiScore.RefreshNames();
+            _uiTimer = new UITimer(_timerManager, timerText);
 
             yield return StartCoroutine(CountdownRoutine());
-
-            _uiTimer = new UITimer(_timerManager, timerText);
         }
 
         private void Update()
@@ -105,14 +129,11 @@ namespace UI
         {
             countdownCanvas.SetActive(true);
 
-            countdownText.text = "3";
-            yield return new WaitForSeconds(1f);
-
-            countdownText.text = "2";
-            yield return new WaitForSeconds(1f);
-
-            countdownText.text = "1";
-            yield return new WaitForSeconds(1f);
+            for (int remaining = Mathf.CeilToInt(matchRulesConfig.CountdownSeconds); remaining > 0; remaining--)
+            {
+                countdownText.text = remaining.ToString();
+                yield return new WaitForSeconds(1f);
+            }
 
             countdownCanvas.SetActive(false);
         }
@@ -128,6 +149,16 @@ namespace UI
                 gameOverCanvas.SetActive(true);
                 finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty;
             }
+        }
+
+        private void HandleRosterChanged(string _)
+        {
+            _uiScore?.RefreshNames();
+        }
+
+        private void HandleUsernameChanged()
+        {
+            _uiScore?.RefreshNames();
         }
 
         private void TriggerGameOver()

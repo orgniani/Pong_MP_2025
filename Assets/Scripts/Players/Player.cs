@@ -1,3 +1,4 @@
+using System;
 using Fusion;
 using Managers;
 using UnityEngine;
@@ -11,8 +12,12 @@ namespace Players
         [SerializeField] private float arenaBoundX = 4f;
 
         [Networked] public int spawnPointIndex { get; set; }
+        [Networked] public NetworkString<_16> Username { get; private set; }
+
+        public static event Action OnAnyUsernameChanged;
 
         private float _halfWidth;
+        private ChangeDetector _changes;
 
         private void Awake()
         {
@@ -22,6 +27,8 @@ namespace Players
 
         public override void Spawned()
         {
+            _changes = GetChangeDetector(ChangeDetector.Source.SimulationState);
+
             Transform spawnPoint = NetworkManager.Instance.GetSpawnPoint(spawnPointIndex);
             if (spawnPoint != null)
             {
@@ -31,6 +38,23 @@ namespace Players
                 transform.localScale = Vector3.one;
             }
 
+            if (Object.HasInputAuthority)
+                RPC_SetUsername(LocalPlayerSession.Username);
+        }
+
+        public override void Render()
+        {
+            foreach (var change in _changes.DetectChanges(this))
+            {
+                if (change == nameof(Username))
+                    OnAnyUsernameChanged?.Invoke();
+            }
+        }
+
+        [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+        private void RPC_SetUsername(NetworkString<_16> username)
+        {
+            Username = username;
         }
 
         public override void FixedUpdateNetwork()

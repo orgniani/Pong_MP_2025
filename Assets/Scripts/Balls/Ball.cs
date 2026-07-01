@@ -1,3 +1,4 @@
+using Config;
 using Fusion;
 using UnityEngine;
 using UnityEngine.Events;
@@ -8,6 +9,7 @@ namespace Balls
     public class Ball : NetworkBehaviour
     {
         [Header("Config")]
+        [SerializeField] private MatchRulesConfig matchRulesConfig;
         [SerializeField] private float startingSpeed = 5f;
         [SerializeField] private float minBounceAngle = 15f;
         [SerializeField] private float speedIncreasePerSecond = 0.2f;
@@ -21,6 +23,7 @@ namespace Balls
         [Networked] public float SpeedMultiplier { get; set; } = 1f;
         [Networked] private float _powerUpTimer { get; set; } = 0f;
         [Networked] private NetworkRNG _rng { get; set; }
+        [Networked] private TickTimer _launchTimer { get; set; }
 
         private BallBounce _ballBounce;
         private BallGoal _ballGoal;
@@ -37,6 +40,12 @@ namespace Balls
             _ballBounce.Initialize(_rb, minBounceAngle);
             _ballGoal.Initialize(_rb, leftBoundX, rightBoundX);
             _ballSpeed.Initialize(_rb, startingSpeed, speedIncreasePerSecond);
+
+            if (!matchRulesConfig)
+            {
+                Debug.LogError("[Ball] MatchRulesConfig is missing.", this);
+                enabled = false;
+            }
         }
 
         public override void Spawned()
@@ -46,12 +55,24 @@ namespace Balls
             if (!HasStateAuthority) return;
 
             _rng = new NetworkRNG(42);
-            LaunchBall();
+            _rb.position = Vector2.zero;
+            _rb.linearVelocity = Vector2.zero;
+            _launchTimer = TickTimer.CreateFromSeconds(Runner, matchRulesConfig.CountdownSeconds);
         }
 
         public override void FixedUpdateNetwork()
         {
             if (!HasStateAuthority) return;
+
+            if (_launchTimer.IsRunning)
+            {
+                if (_launchTimer.Expired(Runner))
+                {
+                    _launchTimer = TickTimer.None;
+                    LaunchBall();
+                }
+                return;
+            }
 
             _ballSpeed.Tick(Runner.DeltaTime);
 

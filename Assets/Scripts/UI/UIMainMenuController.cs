@@ -41,12 +41,14 @@ namespace UI
 
         private void OnPlay1v1Clicked()
         {
+            Managers.LocalPlayerSession.Username = Username;
             Log("Opening session browser in 1v1 mode.");
             sessionBrowser.Open(UIGameModeFilter.OneVsOne);
         }
 
         private void OnPlay2v2Clicked()
         {
+            Managers.LocalPlayerSession.Username = Username;
             Log("Opening session browser in 2v2 mode.");
             sessionBrowser.Open(UIGameModeFilter.TwoVsTwo);
         }

@@ -1,5 +1,6 @@
 using System;
 using Fusion;
+using Helpers;
 using UnityEngine;
 
 namespace Managers
@@ -53,15 +54,17 @@ namespace Managers
 
         public bool HasWinner(out string winnerLabel)
         {
+            var (left, right) = PlayerNameLookup.GetSideNames();
+
             if (LeftScore >= pointsToWin && LeftScore > RightScore)
             {
-                winnerLabel = "Left Player Wins";
+                winnerLabel = $"{left} WINS";
                 return true;
             }
 
             if (RightScore >= pointsToWin && RightScore > LeftScore)
             {
-                winnerLabel = "Right Player Wins";
+                winnerLabel = $"{right} WINS";
                 return true;
             }
 
@@ -72,9 +75,10 @@ namespace Managers
         public string GetMatchResultLabel()
         {
             if (LeftScore == RightScore)
-                return "Draw";
+                return "DRAW";
 
-            return LeftScore > RightScore ? "Left Player Wins" : "Right Player Wins";
+            var (left, right) = PlayerNameLookup.GetSideNames();
+            return LeftScore > RightScore ? $"{left} WINS" : $"{right} WINS";
         }
     }
 }
