@@ -1,72 +1,74 @@
+using System;
+using Fusion;
+using Managers;
 using UnityEngine;
 
 namespace Players
 {
     [RequireComponent(typeof(Collider2D))]
-    public class Player : MonoBehaviour
+    public class Player : NetworkBehaviour
     {
-        [Header("Config")]
         [SerializeField] private float speed = 8f;
-        [SerializeField] private bool useWASD = true;
+        [SerializeField] private float arenaBoundX = 4f;
 
-        private float _moveInput;
-        private float _halfHeight;
+        [Networked] public int spawnPointIndex { get; set; }
+        [Networked] public NetworkString<_16> Username { get; private set; }
+
+        public static event Action OnAnyUsernameChanged;
+
         private float _halfWidth;
-
-        private SpriteRenderer _parentRenderer;
+        private ChangeDetector _changes;
 
         private void Awake()
         {
-            var col = GetComponent<Collider2D>();
-            _halfHeight = col.bounds.extents.y;
-            _halfWidth = col.bounds.extents.x;
-
-            _parentRenderer = transform.parent.GetComponent<SpriteRenderer>();
-            if (_parentRenderer == null)
-                Debug.LogError("[Player] Parent does not have a SpriteRenderer!");
+            var col = GetComponent<CapsuleCollider2D>();
+            _halfWidth = col.size.y / 2f;
         }
 
-        private void Update()
+        public override void Spawned()
         {
-            if (useWASD)
+            _changes = GetChangeDetector(ChangeDetector.Source.SimulationState);
+
+            Transform spawnPoint = NetworkManager.Instance.GetSpawnPoint(spawnPointIndex);
+            if (spawnPoint != null)
             {
-                if (Input.GetKey(KeyCode.W))
-                    _moveInput = 1f;
-                else if (Input.GetKey(KeyCode.S))
-                    _moveInput = -1f;
-                else
-                    _moveInput = 0f;
-            }
-            else
-            {
-                if (Input.GetKey(KeyCode.UpArrow))
-                    _moveInput = 1f;
-                else if (Input.GetKey(KeyCode.DownArrow))
-                    _moveInput = -1f;
-                else
-                    _moveInput = 0f;
+                transform.SetParent(spawnPoint, false);
+                transform.localPosition = Vector3.zero;
+                transform.localRotation = Quaternion.identity;
+                transform.localScale = Vector3.one;
             }
 
-            transform.Translate(-Vector3.right * _moveInput * speed * Time.deltaTime);
-
-            if (_parentRenderer != null)
-                ClampToParentBounds();
+            if (Object.HasInputAuthority)
+                RPC_SetUsername(LocalPlayerSession.Username);
         }
 
-        private void ClampToParentBounds()
+        public override void Render()
         {
-            Bounds bounds = _parentRenderer.bounds;
-            Vector3 pos = transform.position;
+            foreach (var change in _changes.DetectChanges(this))
+            {
+                if (change == nameof(Username))
+                    OnAnyUsernameChanged?.Invoke();
+            }
+        }
 
-            float minX = bounds.min.x + _halfWidth;
-            float maxX = bounds.max.x - _halfWidth;
-            float minY = bounds.min.y + _halfHeight;
-            float maxY = bounds.max.y - _halfHeight;
+        [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
+        private void RPC_SetUsername(NetworkString<_16> username)
+        {
+            Username = username;
+        }
 
-            pos.x = Mathf.Clamp(pos.x, minX, maxX);
-            pos.y = Mathf.Clamp(pos.y, minY, maxY);
+        public override void FixedUpdateNetwork()
+        {
+            if (!Object.HasStateAuthority)
+                return;
 
-            transform.position = pos;
+            if (GetInput<PlayerInputData>(out var input))
+            {
+                Vector3 localPos = transform.localPosition;
+                localPos.x -= input.MoveY * speed * Runner.DeltaTime;
+                localPos.x = Mathf.Clamp(localPos.x, -arenaBoundX + _halfWidth, arenaBoundX - _halfWidth);
+                transform.localPosition = localPos;
+            }
         }
     }
 }

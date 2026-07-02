@@ -1,45 +1,30 @@
-using System;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Balls
 {
+    public enum GoalResult { None, LeftGoal, RightGoal }
+
     public class BallGoal
     {
         private Rigidbody2D _rb;
+        private float _leftBoundX;
+        private float _rightBoundX;
 
-        private UnityEvent _onLeftGoal;
-        private UnityEvent _onRightGoal;
-        private Action<bool> _onReset;
-
-        public void Initialize(
-            Rigidbody2D rb,
-            UnityEvent left,
-            UnityEvent right,
-            Action<bool> onReset)
+        public void Initialize(Rigidbody2D rb, float leftBoundX, float rightBoundX)
         {
             _rb = rb;
-            _onLeftGoal = left;
-            _onRightGoal = right;
-            _onReset = onReset;
+            _leftBoundX = leftBoundX;
+            _rightBoundX = rightBoundX;
         }
 
-        public void Tick()
+        public GoalResult Tick()
         {
-            if (!Camera.main) return;
-
-            Vector3 viewportPos = Camera.main.WorldToViewportPoint(_rb.position);
-
-            if (viewportPos.x < 0f - 0.05f)
-            {
-                _onLeftGoal?.Invoke();
-                _onReset(false);
-            }
-            else if (viewportPos.x > 1f + 0.05f)
-            {
-                _onRightGoal?.Invoke();
-                _onReset(true);
-            }
+            float x = _rb.position.x;
+            if (x < _leftBoundX)
+                return GoalResult.LeftGoal;
+            if (x > _rightBoundX)
+                return GoalResult.RightGoal;
+            return GoalResult.None;
         }
     }
 }
