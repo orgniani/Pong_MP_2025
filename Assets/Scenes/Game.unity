@@ -1026,8 +1026,12 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
       propertyPath: matchRulesConfig
-      value: 
+      value:
       objectReference: {fileID: 11400000, guid: 488260269aab7e84d9bc2b0eb7f12273, type: 2}
+    - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
+      propertyPath: isPersistent
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
       propertyPath: 'spawnPositions.Array.data[0]'
       value: 

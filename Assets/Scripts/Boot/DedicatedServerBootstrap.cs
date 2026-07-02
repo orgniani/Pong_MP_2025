@@ -47,6 +47,7 @@ namespace Boot
         {
             var runnerObj = new GameObject("NetworkRunner", typeof(NetworkRunner));
             DontDestroyOnLoad(runnerObj);
+            runnerObj.AddComponent<MatchSessionState>();
             var runner = runnerObj.GetComponent<NetworkRunner>();
             runner.ProvideInput = false;
 

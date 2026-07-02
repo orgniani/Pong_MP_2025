@@ -53,5 +53,15 @@ namespace Managers.Network
         {
             _spawnedPlayers.Clear();
         }
+
+        public void DespawnAll(NetworkRunner runner)
+        {
+            foreach (var obj in _spawnedPlayers.Values)
+            {
+                runner.Despawn(obj);
+            }
+
+            _spawnedPlayers.Clear();
+        }
     }
 }

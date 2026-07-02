@@ -194,7 +194,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   matchRulesConfig: {fileID: 11400000, guid: 488260269aab7e84d9bc2b0eb7f12273, type: 2}
-  allowNonHeadlessStartInEditor: 1
+  allowNonHeadlessStartInEditor: 0
+  restartDelaySec: 2
 --- !u!4 &557261067
 Transform:
   m_ObjectHideFlags: 0

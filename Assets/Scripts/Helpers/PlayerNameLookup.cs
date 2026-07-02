@@ -14,6 +14,9 @@ namespace Helpers
 
             foreach (var p in players)
             {
+                if (p.Object == null || !p.Object.IsValid)
+                    continue;
+
                 var name = p.Username.ToString();
                 if (string.IsNullOrWhiteSpace(name))
                     name = $"PLAYER {p.spawnPointIndex + 1}";

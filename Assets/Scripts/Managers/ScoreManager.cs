@@ -36,6 +36,15 @@ namespace Managers
             }
         }
 
+        public void ResetScore()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            LeftScore = 0;
+            RightScore = 0;
+        }
+
         public void RegisterLeftGoal()
         {
             if (!HasStateAuthority)

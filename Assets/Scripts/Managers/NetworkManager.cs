@@ -8,6 +8,7 @@ using Config;
 using Managers.Network;
 using System.Linq;
 using Balls;
+using UnityEngine.SceneManagement;
 
 namespace Managers
 {
@@ -35,7 +36,7 @@ namespace Managers
         private NetworkRunner _networkRunner;
         private NetworkPlayerSpawner _playerSpawner;
         private NetworkInputHandler _inputHandler;
-        private bool _ballGoalCallbacksBound;
+        private Ball _boundBall;
 
         public event Action OnConnected;
         public event Action OnDisconnected;
@@ -44,6 +45,7 @@ namespace Managers
 
         public NetworkPlayerSpawner PlayerSpawner => _playerSpawner;
         public GameOverManager GameOverManager => _gameOverManager;
+        public bool IsServer => _networkRunner != null && _networkRunner.IsServer;
 
         private void Awake()
         {
@@ -56,6 +58,12 @@ namespace Managers
 
             _networkRunner.AddCallbacks(this);
         }
+
+        private void OnDestroy()
+        {
+            _networkRunner?.RemoveCallbacks(this);
+        }
+
         void OnApplicationQuit ()
         {
             if (_networkRunner)
@@ -67,8 +75,10 @@ namespace Managers
 
         public void Shutdown ()
         {
-            if (_networkRunner)
-                _networkRunner.Shutdown();
+            if (!_networkRunner)
+                return;
+
+            _networkRunner.Shutdown();
         }
 
         public Transform GetSpawnPoint(int index)
@@ -87,10 +97,13 @@ namespace Managers
             if (shutdownReason == ShutdownReason.GameNotFound)
                 return;
 
-            if (_networkRunner.IsServer)
+            if (_networkRunner != null && _networkRunner.IsServer)
                 _spawnedPlayers.Clear();
 
             _networkRunner = null;
+
+            if (runner != null && runner.gameObject != null)
+                Destroy(runner.gameObject);
 
             OnDisconnected?.Invoke();
         }
@@ -99,29 +112,19 @@ namespace Managers
         {
             if (runner.IsServer)
             {
-                _scoreManager = FindFirstObjectByType<ScoreManager>();
-                if (_scoreManager == null)
+                var matchSessionState = runner.GetComponent<MatchSessionState>();
+                if (matchSessionState != null && matchSessionState.IsPostGameCleanup)
                 {
-                    _scoreManager = runner.Spawn(scoreManagerPrefab, Vector3.zero, Quaternion.identity)
-                                                .GetComponent<ScoreManager>();
+                    Debug.Log($"{LogPrefix} cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
+                    runner.Disconnect(player, null);
+                    return;
                 }
 
                 _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab);
-                _playerSpawner.SpawnPlayer(runner, player);
-
-                TryBindBallGoalCallbacks();
-
-                if (runner.ActivePlayers.Count() >= matchRulesConfig.MinPlayersToStart && _timerManager == null)
+                if (IsGameSceneActive() && matchSessionState?.MatchInProgress == true)
                 {
-                    var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
-                    _timerManager = timerObj.GetComponent<TimerManager>();
-                    _timerManager.StartMatchCountdown();
-                }
-
-                if (runner.ActivePlayers.Count() >= matchRulesConfig.MinPlayersToStart && _gameOverManager == null)
-                {
-                    var gameOverManagerObj = runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity);
-                    _gameOverManager = gameOverManagerObj.GetComponent<GameOverManager>();
+                    SpawnMissingPlayer(runner, player);
+                    EnsureGameplayManagers(runner);
                 }
             }
 
@@ -132,7 +135,27 @@ namespace Managers
         {
             if (runner.IsServer)
             {
-                _playerSpawner.DespawnPlayer(runner, player);
+                if (_playerSpawner != null && _playerSpawner.IsSpawned(player))
+                    _playerSpawner.DespawnPlayer(runner, player);
+
+                var matchSessionState = runner.GetComponent<MatchSessionState>();
+                if (matchSessionState != null && matchSessionState.MatchInProgress
+                    && _gameOverManager != null && !_gameOverManager.IsGameOver
+                    && runner.ActivePlayers.Count() < ResolveMinPlayersToStart())
+                {
+                    _gameOverManager.TriggerForfeit("Opponent disconnected");
+                }
+
+                if (runner.ActivePlayers.Count() == 0)
+                {
+                    ResetToWaitingState(runner, matchSessionState);
+                }
+                else if (matchSessionState != null && !matchSessionState.MatchInProgress
+                         && !matchSessionState.IsPostGameCleanup
+                         && runner.ActivePlayers.Count() < ResolveMinPlayersToStart())
+                {
+                    matchSessionState.RearmAutoStart();
+                }
             }
 
             OnJoinedPlayerLeft?.Invoke("Player_" + player.PlayerId);
@@ -150,7 +173,7 @@ namespace Managers
         {
             Debug.LogWarning($"{LogPrefix} disconnect reason: mode={runner.GameMode}, reason={reason}, session='{runner.SessionInfo.Name}'");
 
-            if (_networkRunner.IsClient)
+            if (_networkRunner != null && _networkRunner.IsClient)
                 Shutdown();
         }
 
@@ -178,36 +201,41 @@ namespace Managers
         {
             if (!runner.IsServer) return;
 
+            var matchSessionState = runner.GetComponent<MatchSessionState>();
+
+            if (!IsGameSceneActive())
+            {
+                PrepareForLobbyState();
+
+                if (matchSessionState != null && !matchSessionState.IsPostGameCleanup
+                    && runner.ActivePlayers.Count() < ResolveMinPlayersToStart())
+                    matchSessionState?.RearmAutoStart();
+
+                return;
+            }
+
+            if (runner.ActivePlayers.Count() == 0)
+            {
+                ResetToWaitingState(runner, matchSessionState);
+                return;
+            }
+
+            if (matchSessionState?.MatchInProgress != true)
+                return;
+
             _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab);
 
             foreach (var player in runner.ActivePlayers)
             {
-                if (_playerSpawner.IsSpawned(player)) continue;
-
-                _playerSpawner.SpawnPlayer(runner, player);
+                SpawnMissingPlayer(runner, player);
             }
 
-            TryBindBallGoalCallbacks();
+            EnsureGameplayManagers(runner);
 
-            if (_scoreManager == null)
+            if (runner.ActivePlayers.Count() < ResolveMinPlayersToStart()
+                && _gameOverManager != null && !_gameOverManager.IsGameOver)
             {
-                _scoreManager = FindFirstObjectByType<ScoreManager>();
-                if (_scoreManager == null)
-                    _scoreManager = runner.Spawn(scoreManagerPrefab, Vector3.zero, Quaternion.identity)
-                                         .GetComponent<ScoreManager>();
-            }
-
-            if (_timerManager == null)
-            {
-                var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
-                _timerManager = timerObj.GetComponent<TimerManager>();
-                _timerManager.StartMatchCountdown();
-            }
-
-            if (_gameOverManager == null)
-            {
-                var gameOverManagerObj = runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity);
-                _gameOverManager = gameOverManagerObj.GetComponent<GameOverManager>();
+                _gameOverManager.TriggerForfeit("Opponent disconnected");
             }
         }
         void INetworkRunnerCallbacks.OnSceneLoadStart (NetworkRunner runner) { }
@@ -218,16 +246,112 @@ namespace Managers
 
         private void TryBindBallGoalCallbacks()
         {
-            if (_ballGoalCallbacksBound || _scoreManager == null)
+            if (_scoreManager == null)
                 return;
 
             var ball = FindFirstObjectByType<Ball>();
             if (ball == null)
                 return;
 
+            if (_boundBall == ball)
+                return;
+
+            ClearBallGoalCallbacks();
+
             ball.onLeftGoal.AddListener(_scoreManager.RegisterRightGoal);
             ball.onRightGoal.AddListener(_scoreManager.RegisterLeftGoal);
-            _ballGoalCallbacksBound = true;
+            _boundBall = ball;
+        }
+
+        public void PrepareForLobbyState()
+        {
+            ClearBallGoalCallbacks();
+            _playerSpawner?.ClearAll();
+            _scoreManager = null;
+            _timerManager = null;
+            _gameOverManager = null;
+        }
+
+        public void ForceDisconnectAllPlayers(NetworkRunner runner)
+        {
+            if (runner == null || !runner.IsServer)
+                return;
+
+            var playersToDisconnect = runner.ActivePlayers.ToArray();
+            foreach (var player in playersToDisconnect)
+            {
+                Debug.Log($"{LogPrefix} disconnecting player={player.PlayerId} during post-game cleanup");
+                runner.Disconnect(player, null);
+            }
+        }
+
+        private void ClearBallGoalCallbacks()
+        {
+            if (_boundBall != null && _scoreManager != null)
+            {
+                _boundBall.onLeftGoal.RemoveListener(_scoreManager.RegisterRightGoal);
+                _boundBall.onRightGoal.RemoveListener(_scoreManager.RegisterLeftGoal);
+            }
+
+            _boundBall = null;
+        }
+
+        private void EnsureGameplayManagers(NetworkRunner runner)
+        {
+            _scoreManager = FindFirstObjectByType<ScoreManager>()
+                            ?? runner.Spawn(scoreManagerPrefab, Vector3.zero, Quaternion.identity).GetComponent<ScoreManager>();
+
+            if (_timerManager == null)
+            {
+                _timerManager = FindFirstObjectByType<TimerManager>();
+                if (_timerManager == null)
+                {
+                    var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
+                    _timerManager = timerObj.GetComponent<TimerManager>();
+                    _timerManager.StartMatchCountdown();
+                }
+            }
+
+            _gameOverManager = FindFirstObjectByType<GameOverManager>()
+                               ?? runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity).GetComponent<GameOverManager>();
+
+            TryBindBallGoalCallbacks();
+        }
+
+        private void SpawnMissingPlayer(NetworkRunner runner, PlayerRef player)
+        {
+            if (_playerSpawner.IsSpawned(player))
+                return;
+
+            _playerSpawner.SpawnPlayer(runner, player);
+        }
+
+        private void ResetToWaitingState(NetworkRunner runner, MatchSessionState matchSessionState)
+        {
+            matchSessionState?.ResetToWaitingForPlayers();
+            PrepareForLobbyState();
+
+            var lobbySceneIndex = SceneCatalog.GetLobbyIndex();
+            if (lobbySceneIndex < 0)
+            {
+                Debug.LogError("[NetworkManager] Could not resolve Lobby scene index from SceneCatalog.");
+                return;
+            }
+
+            if (SceneManager.GetActiveScene().buildIndex == lobbySceneIndex)
+                return;
+
+            runner.LoadScene(SceneRef.FromIndex(lobbySceneIndex));
+        }
+
+        private int ResolveMinPlayersToStart()
+        {
+            return matchRulesConfig != null ? matchRulesConfig.ResolveMinPlayersToStart() : 1;
+        }
+
+        private static bool IsGameSceneActive()
+        {
+            return SceneManager.GetActiveScene().buildIndex == SceneCatalog.GetGameIndex();
         }
     }
 }

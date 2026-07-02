@@ -7,6 +7,8 @@ namespace Managers
 {
     public class TimerManager : NetworkBehaviour
     {
+        [SerializeField] private float matchDurationSeconds = 120f;
+
         [Networked] public float RemainingTime { get; private set; } = 120f;
         [Networked] public bool TimerRunning { get; private set; } = false;
 
@@ -37,11 +39,27 @@ namespace Managers
         {
             yield return new WaitForSeconds(3f);
             TimerRunning = true;
+            _countdownCoroutine = null;
         }
 
         public void StopTimer()
         {
             TimerRunning = false;
+        }
+
+        public void ResetTimer()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            if (_countdownCoroutine != null)
+            {
+                StopCoroutine(_countdownCoroutine);
+                _countdownCoroutine = null;
+            }
+
+            TimerRunning = false;
+            RemainingTime = matchDurationSeconds;
         }
     }
 }

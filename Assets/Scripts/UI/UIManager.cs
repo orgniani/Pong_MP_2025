@@ -170,7 +170,7 @@ namespace UI
 
         private void ReturnToMainMenu()
         {
-            if (NetworkManager.Instance)
+            if (NetworkManager.Instance && !NetworkManager.Instance.IsServer)
                 NetworkManager.Instance.Shutdown();
 
             var index = SceneCatalog.GetMainMenuIndex(-1);
