@@ -24,6 +24,7 @@ namespace Balls
         [Networked] private float _powerUpTimer { get; set; } = 0f;
         [Networked] private NetworkRNG _rng { get; set; }
         [Networked] private TickTimer _launchTimer { get; set; }
+        [Networked] private bool _isStopped { get; set; }
 
         private BallBounce _ballBounce;
         private BallGoal _ballGoal;
@@ -55,6 +56,7 @@ namespace Balls
             if (!HasStateAuthority) return;
 
             _rng = new NetworkRNG(42);
+            _isStopped = false;
             _rb.position = Vector2.zero;
             _rb.linearVelocity = Vector2.zero;
             _launchTimer = TickTimer.CreateFromSeconds(Runner, matchRulesConfig.CountdownSeconds);
@@ -63,6 +65,12 @@ namespace Balls
         public override void FixedUpdateNetwork()
         {
             if (!HasStateAuthority) return;
+
+            if (_isStopped)
+            {
+                _rb.linearVelocity = Vector2.zero;
+                return;
+            }
 
             if (_launchTimer.IsRunning)
             {
@@ -102,6 +110,18 @@ namespace Balls
             }
         }
 
+        public void StopImmediately()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            _isStopped = true;
+            _launchTimer = TickTimer.None;
+            _powerUpTimer = 0f;
+            SpeedMultiplier = 1f;
+            _rb.linearVelocity = Vector2.zero;
+        }
+
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!HasStateAuthority) return;
@@ -110,6 +130,9 @@ namespace Balls
 
         private void LaunchBall()
         {
+            if (_isStopped)
+                return;
+
             _ballSpeed.ResetSpeed();
             _rb.position = Vector2.zero;
 
@@ -124,6 +147,9 @@ namespace Balls
 
         private void ResetBall()
         {
+            if (_isStopped)
+                return;
+
             LaunchBall();
         }
     }

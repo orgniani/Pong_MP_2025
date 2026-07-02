@@ -14,6 +14,7 @@ namespace Managers
 
         private ScoreManager _scoreManager;
         private TimerManager _timerManager;
+        private Balls.Ball _ball;
 
         public bool IsGameOver => _isGameOver;
 
@@ -21,6 +22,7 @@ namespace Managers
         {
             _scoreManager = FindFirstObjectByType<ScoreManager>();
             _timerManager = FindFirstObjectByType<TimerManager>();
+            _ball = FindFirstObjectByType<Balls.Ball>();
 
             Debug.Log("<color=green>NetworkGameOverManager spawned.</color>");
         }
@@ -36,10 +38,6 @@ namespace Managers
                 return;
             }
 
-            if (_scoreManager != null && _scoreManager.HasWinner(out string winner))
-            {
-                TriggerGameOver(winner);
-            }
         }
 
         public void TriggerForfeit(string reason)
@@ -56,6 +54,9 @@ namespace Managers
 
             if (_timerManager != null)
                 _timerManager.StopTimer();
+
+            _ball ??= FindFirstObjectByType<Balls.Ball>();
+            _ball?.StopImmediately();
 
             Debug.Log($"<color=red>Game over triggered! Reason: {reason}</color>");
 

@@ -7,9 +7,6 @@ namespace Managers
 {
     public class ScoreManager : NetworkBehaviour
     {
-        [Header("Pong score")]
-        [SerializeField] private int pointsToWin = 5;
-
         [Networked] public int LeftScore { get; private set; }
         [Networked] public int RightScore { get; private set; }
 
@@ -59,26 +56,6 @@ namespace Managers
                 return;
 
             RightScore++;
-        }
-
-        public bool HasWinner(out string winnerLabel)
-        {
-            var (left, right) = PlayerNameLookup.GetSideNames();
-
-            if (LeftScore >= pointsToWin && LeftScore > RightScore)
-            {
-                winnerLabel = $"{left} WINS";
-                return true;
-            }
-
-            if (RightScore >= pointsToWin && RightScore > LeftScore)
-            {
-                winnerLabel = $"{right} WINS";
-                return true;
-            }
-
-            winnerLabel = string.Empty;
-            return false;
         }
 
         public string GetMatchResultLabel()
