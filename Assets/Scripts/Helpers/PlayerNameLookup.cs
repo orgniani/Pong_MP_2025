@@ -17,9 +17,9 @@ namespace Helpers
                 if (p.Object == null || !p.Object.IsValid)
                     continue;
 
-                var name = p.Username.ToString();
+                var name = p.Username;
                 if (string.IsNullOrWhiteSpace(name))
-                    name = $"PLAYER {p.spawnPointIndex + 1}";
+                    name = $"PLAYER {p.SpawnPointIndex + 1}";
 
                 var side = p.transform.position.x < 0f ? left : right;
                 side.Add(name.ToUpperInvariant());

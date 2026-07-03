@@ -308,6 +308,7 @@ namespace Managers
                 {
                     var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
                     _timerManager = timerObj.GetComponent<TimerManager>();
+                    _timerManager.ResetTimer();
                     _timerManager.StartMatchCountdown();
                 }
             }

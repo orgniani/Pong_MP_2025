@@ -33,7 +33,7 @@ namespace Managers.Network
                 player,
                 onBeforeSpawned: (r, obj) =>
                 {
-                    obj.GetComponent<Players.Player>().spawnPointIndex = spawnIndex;
+                    obj.GetComponent<Players.Player>().SpawnPointIndex = spawnIndex;
                 }
             );
 

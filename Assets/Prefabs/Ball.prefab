@@ -167,6 +167,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f7bfffea9d1db647a5aab29c785e3d8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  matchRulesConfig: {fileID: 11400000, guid: 488260269aab7e84d9bc2b0eb7f12273, type: 2}
   startingSpeed: 5
   minBounceAngle: 5
   speedIncreasePerSecond: 0.05
