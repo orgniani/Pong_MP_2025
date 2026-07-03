@@ -36,6 +36,7 @@ namespace Players
         private float _sizeAnimationStart = 1f;
         private float _sizeAnimationTarget = 1f;
         private float _sizeAnimationElapsed = float.MaxValue;
+        private SpriteRenderer _movementAreaRenderer;
 
         private void Awake()
         {
@@ -56,6 +57,7 @@ namespace Players
             }
 
             _baseLocalScale = transform.localScale;
+            ResolveMovementAreaRenderer();
             SnapSize(SizeMultiplier);
 
             if (Object.HasInputAuthority)
@@ -86,8 +88,8 @@ namespace Players
             {
                 Vector3 localPos = transform.localPosition;
                 localPos.x -= input.MoveY * speed * Runner.DeltaTime;
-                float horizontalHalfExtent = GetHorizontalHalfExtent();
-                localPos.x = Mathf.Clamp(localPos.x, -arenaBoundX + horizontalHalfExtent, arenaBoundX - horizontalHalfExtent);
+                float localHalfExtent = GetLocalHalfExtentAlongParentX();
+                localPos.x = Mathf.Clamp(localPos.x, GetMinAllowedX(localHalfExtent), GetMaxAllowedX(localHalfExtent));
                 transform.localPosition = localPos;
             }
 
@@ -173,23 +175,62 @@ namespace Players
             transform.localScale = scaledLocalScale;
         }
 
-        private float GetHorizontalHalfExtent()
+        private float GetLocalHalfExtentAlongParentX()
         {
             if (_capsuleCollider == null)
                 return 0f;
 
-            Vector2 worldCenter = transform.TransformPoint(_capsuleCollider.offset);
-            Vector2 rightAxis = transform.TransformVector(new Vector3(_capsuleCollider.size.x * 0.5f, 0f, 0f));
-            Vector2 upAxis = transform.TransformVector(new Vector3(0f, _capsuleCollider.size.y * 0.5f, 0f));
+            Transform referenceSpace = transform.parent != null ? transform.parent : transform;
+
+            Vector3 worldCenter = transform.TransformPoint(_capsuleCollider.offset);
+            Vector3 rightAxis = transform.TransformVector(new Vector3(_capsuleCollider.size.x * 0.5f, 0f, 0f));
+            Vector3 upAxis = transform.TransformVector(new Vector3(0f, _capsuleCollider.size.y * 0.5f, 0f));
+
+            Vector3 localCenter = referenceSpace.InverseTransformPoint(worldCenter);
+
+            Vector3[] corners =
+            {
+                referenceSpace.InverseTransformPoint(worldCenter + rightAxis + upAxis),
+                referenceSpace.InverseTransformPoint(worldCenter + rightAxis - upAxis),
+                referenceSpace.InverseTransformPoint(worldCenter - rightAxis + upAxis),
+                referenceSpace.InverseTransformPoint(worldCenter - rightAxis - upAxis)
+            };
 
             float maxExtent = 0f;
 
-            maxExtent = Mathf.Max(maxExtent, Mathf.Abs((worldCenter + rightAxis + upAxis).x - transform.position.x));
-            maxExtent = Mathf.Max(maxExtent, Mathf.Abs((worldCenter + rightAxis - upAxis).x - transform.position.x));
-            maxExtent = Mathf.Max(maxExtent, Mathf.Abs((worldCenter - rightAxis + upAxis).x - transform.position.x));
-            maxExtent = Mathf.Max(maxExtent, Mathf.Abs((worldCenter - rightAxis - upAxis).x - transform.position.x));
+            for (int i = 0; i < corners.Length; i++)
+                maxExtent = Mathf.Max(maxExtent, Mathf.Abs(corners[i].x - localCenter.x));
 
             return maxExtent;
+        }
+
+        private float GetMinAllowedX(float localHalfExtent)
+        {
+            if (_movementAreaRenderer != null)
+                return (-GetMovementAreaHalfLength()) + localHalfExtent;
+
+            return -arenaBoundX + localHalfExtent;
+        }
+
+        private float GetMaxAllowedX(float localHalfExtent)
+        {
+            if (_movementAreaRenderer != null)
+                return GetMovementAreaHalfLength() - localHalfExtent;
+
+            return arenaBoundX - localHalfExtent;
+        }
+
+        private float GetMovementAreaHalfLength()
+        {
+            if (_movementAreaRenderer == null)
+                return arenaBoundX;
+
+            return _movementAreaRenderer.size.x * 0.5f;
+        }
+
+        private void ResolveMovementAreaRenderer()
+        {
+            _movementAreaRenderer = transform.parent != null ? transform.parent.GetComponent<SpriteRenderer>() : null;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
