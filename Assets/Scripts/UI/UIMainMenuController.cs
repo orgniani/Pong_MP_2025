@@ -14,8 +14,7 @@ namespace UI
         [SerializeField] private TMP_InputField usernameInputField;
         [SerializeField] private UISessionBrowser sessionBrowser;
         [SerializeField] private GameObject creditsPanel;
-        [SerializeField] private bool enableLogs = false;
-
+        [SerializeField] private GameObject usernameValidationPanel;
         private const int UsernameCharacterLimit = 16;
 
         public string Username => usernameInputField != null ? usernameInputField.text.Trim() : string.Empty;
@@ -29,28 +28,45 @@ namespace UI
             }
 
             usernameInputField.characterLimit = UsernameCharacterLimit;
+            usernameInputField.SetTextWithoutNotify(Managers.LocalPlayerSession.Username);
 
             play1v1Button.onClick.AddListener(OnPlay1v1Clicked);
             play2v2Button.onClick.AddListener(OnPlay2v2Clicked);
             creditsButton.onClick.AddListener(OnCreditsClicked);
             if (closeCreditsButton != null) closeCreditsButton.onClick.AddListener(OnCloseCreditsClicked);
             quitButton.onClick.AddListener(QuitGame);
+            usernameInputField.onValueChanged.AddListener(OnUsernameValueChanged);
 
             if (creditsPanel != null) creditsPanel.SetActive(false);
+            SetUsernameValidationVisible(false);
+        }
+
+        private void OnEnable()
+        {
+            if (usernameInputField != null)
+                usernameInputField.SetTextWithoutNotify(Managers.LocalPlayerSession.Username);
+
+            SetUsernameValidationVisible(false);
         }
 
         private void OnPlay1v1Clicked()
         {
-            Managers.LocalPlayerSession.Username = Username;
-            Log("Opening session browser in 1v1 mode.");
-            sessionBrowser.Open(UIGameModeFilter.OneVsOne);
+            TryOpenSessionBrowser(UIGameModeFilter.OneVsOne);
         }
 
         private void OnPlay2v2Clicked()
         {
+            TryOpenSessionBrowser(UIGameModeFilter.TwoVsTwo);
+        }
+
+        private void OnUsernameValueChanged(string _)
+        {
             Managers.LocalPlayerSession.Username = Username;
-            Log("Opening session browser in 2v2 mode.");
-            sessionBrowser.Open(UIGameModeFilter.TwoVsTwo);
+
+            if (!string.IsNullOrEmpty(Managers.LocalPlayerSession.Username))
+            {
+                SetUsernameValidationVisible(false);
+            }
         }
 
         private void OnCreditsClicked()
@@ -86,6 +102,27 @@ namespace UI
             return ok;
         }
 
+        private void TryOpenSessionBrowser(UIGameModeFilter gameModeFilter)
+        {
+            if (string.IsNullOrWhiteSpace(Username))
+            {
+                SetUsernameValidationVisible(true);
+                return;
+            }
+
+            Managers.LocalPlayerSession.Username = Username;
+            SetUsernameValidationVisible(false);
+            sessionBrowser.Open(gameModeFilter);
+        }
+
+        private void SetUsernameValidationVisible(bool isVisible)
+        {
+            if (usernameValidationPanel != null)
+            {
+                usernameValidationPanel.SetActive(isVisible);
+            }
+        }
+
         private void OnDestroy()
         {
             if (play1v1Button != null) play1v1Button.onClick.RemoveListener(OnPlay1v1Clicked);
@@ -93,12 +130,8 @@ namespace UI
             if (creditsButton != null) creditsButton.onClick.RemoveListener(OnCreditsClicked);
             if (closeCreditsButton != null) closeCreditsButton.onClick.RemoveListener(OnCloseCreditsClicked);
             if (quitButton != null) quitButton.onClick.RemoveListener(QuitGame);
+            if (usernameInputField != null) usernameInputField.onValueChanged.RemoveListener(OnUsernameValueChanged);
         }
 
-        private void Log(string message)
-        {
-            if (!enableLogs) return;
-            Debug.Log($"[{GetType().Name}] {message}", this);
-        }
     }
 }
