@@ -12,6 +12,7 @@ namespace UI
 
         private void Start()
         {
+            Helpers.PlayerNameLookup.ResetCachedSideNames();
             _runner = FindFirstObjectByType<NetworkRunner>();
             if (_runner != null)
                 _runner.AddCallbacks(this);

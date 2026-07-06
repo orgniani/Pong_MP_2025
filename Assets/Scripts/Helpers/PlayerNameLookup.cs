@@ -6,6 +6,9 @@ namespace Helpers
 {
     public static class PlayerNameLookup
     {
+        private static string _cachedLeftName = "LEFT";
+        private static string _cachedRightName = "RIGHT";
+
         public static (string left, string right) GetSideNames()
         {
             var players = Object.FindObjectsByType<Player>(FindObjectsSortMode.None);
@@ -25,10 +28,22 @@ namespace Helpers
                 side.Add(name.ToUpperInvariant());
             }
 
+            if (left.Count > 0)
+                _cachedLeftName = string.Join(" & ", left);
+
+            if (right.Count > 0)
+                _cachedRightName = string.Join(" & ", right);
+
             return (
-                left.Count > 0 ? string.Join(" & ", left) : "LEFT",
-                right.Count > 0 ? string.Join(" & ", right) : "RIGHT"
+                _cachedLeftName,
+                _cachedRightName
             );
+        }
+
+        public static void ResetCachedSideNames()
+        {
+            _cachedLeftName = "LEFT";
+            _cachedRightName = "RIGHT";
         }
     }
 }
