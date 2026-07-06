@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &3652935429078975500
+--- !u!1 &2823991252901659143
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,42 +8,41 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 122647482626435112}
-  - component: {fileID: 7975300581807426850}
-  - component: {fileID: 6300295319161458139}
-  - component: {fileID: 6894107902510836822}
-  - component: {fileID: 8230315667300888054}
-  - component: {fileID: 8290271604916902322}
-  - component: {fileID: 2003489518816915208}
+  - component: {fileID: 6148774827832003216}
+  - component: {fileID: 8787566178335330914}
+  - component: {fileID: 70984372087974828}
+  - component: {fileID: 3233612200180232722}
+  - component: {fileID: 5727173546220971723}
+  - component: {fileID: 8169401254301782345}
   m_Layer: 0
-  m_Name: Ball
+  m_Name: PowerUp
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &122647482626435112
+--- !u!4 &6148774827832003216
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3652935429078975500}
+  m_GameObject: {fileID: 2823991252901659143}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.5, y: 0.5, z: 0.5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!212 &7975300581807426850
+--- !u!212 &8787566178335330914
 SpriteRenderer:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3652935429078975500}
+  m_GameObject: {fileID: 2823991252901659143}
   m_Enabled: 1
   m_CastShadows: 0
   m_ReceiveShadows: 0
@@ -81,7 +80,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 1
-  m_Sprite: {fileID: 3330307548123944572, guid: d78d280ac17c4af4499a1d113fc1aaed, type: 3}
+  m_Sprite: {fileID: -5159362228428509745, guid: 520df695c3566f14cafc20b5230a2d2c, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -92,17 +91,17 @@ SpriteRenderer:
   m_WasSpriteAssigned: 1
   m_MaskInteraction: 0
   m_SpriteSortPoint: 0
---- !u!58 &6300295319161458139
+--- !u!58 &70984372087974828
 CircleCollider2D:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3652935429078975500}
+  m_GameObject: {fileID: 2823991252901659143}
   m_Enabled: 1
   serializedVersion: 3
   m_Density: 1
-  m_Material: {fileID: 6200000, guid: 3ffb67fbe967f61439e1379e944cdf19, type: 2}
+  m_Material: {fileID: 0}
   m_IncludeLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -122,91 +121,53 @@ CircleCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
   m_Offset: {x: 0, y: 0}
-  m_Radius: 0.2
---- !u!50 &6894107902510836822
-Rigidbody2D:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3652935429078975500}
-  m_BodyType: 0
-  m_Simulated: 1
-  m_UseFullKinematicContacts: 0
-  m_UseAutoMass: 0
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_GravityScale: 0
-  m_Material: {fileID: 6200000, guid: 3ffb67fbe967f61439e1379e944cdf19, type: 2}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_Interpolate: 0
-  m_SleepingMode: 1
-  m_CollisionDetection: 0
-  m_Constraints: 4
---- !u!114 &8230315667300888054
+  m_Radius: 0.5
+--- !u!114 &3233612200180232722
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3652935429078975500}
+  m_GameObject: {fileID: 2823991252901659143}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6f7bfffea9d1db647a5aab29c785e3d8, type: 3}
+  m_Script: {fileID: 11500000, guid: 4ea68deb79017d746856a78096bb4a69, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  matchRulesConfig: {fileID: 11400000, guid: 488260269aab7e84d9bc2b0eb7f12273, type: 2}
-  startingSpeed: 5
-  minBounceAngle: 5
-  speedIncreasePerSecond: 0.05
-  leftBoundX: -9
-  rightBoundX: 9
-  onLeftGoal:
-    m_PersistentCalls:
-      m_Calls: []
-  onRightGoal:
-    m_PersistentCalls:
-      m_Calls: []
-  _SpeedMultiplier: 1
---- !u!114 &8290271604916902322
+  sizeMultiplier: 2
+  effectDuration: 10
+--- !u!114 &5727173546220971723
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3652935429078975500}
+  m_GameObject: {fileID: 2823991252901659143}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SortKey: 2477366503
+  SortKey: 2769749316
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 8230315667300888054}
-  - {fileID: 2003489518816915208}
+  - {fileID: 3233612200180232722}
+  - {fileID: 8169401254301782345}
   ForceRemoteRenderTimeframe: 0
---- !u!114 &2003489518816915208
+--- !u!114 &8169401254301782345
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3652935429078975500}
+  m_GameObject: {fileID: 2823991252901659143}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}

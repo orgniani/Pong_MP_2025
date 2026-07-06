@@ -140,15 +140,11 @@ namespace UI
 
         private void CheckGameOver()
         {
-            if (_gameOverManager == null || _gameOverManager.Object == null)
+            if (_gameOverManager == null || _gameOverManager.Object == null || !_gameOverManager.IsGameOver)
                 return;
 
-            if (_gameOverManager.IsGameOver && !gameOverCanvas.activeSelf)
-            {
-                CursorLocker.Unlock();
-                gameOverCanvas.SetActive(true);
-                finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty;
-            }
+            if (!gameOverCanvas.activeSelf || string.IsNullOrWhiteSpace(finalWinnersText.text))
+                ShowGameOver(_scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty);
         }
 
         private void HandleRosterChanged(string _)
@@ -163,9 +159,17 @@ namespace UI
 
         private void TriggerGameOver()
         {
+            if (gameOverCanvas.activeSelf && !string.IsNullOrWhiteSpace(finalWinnersText.text))
+                return;
+
+            ShowGameOver(_scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty);
+        }
+
+        private void ShowGameOver(string winnersText)
+        {
             CursorLocker.Unlock();
             gameOverCanvas.SetActive(true);
-            finalWinnersText.text = _scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty;
+            finalWinnersText.text = winnersText;
         }
 
         private void ReturnToMainMenu()

@@ -64,5 +64,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 00cdd285394d6ac48b78a068fdaa5892, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _RemainingTime: 60
-  _TimerRunning: 0
+  matchDurationSeconds: 240

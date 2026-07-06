@@ -8,6 +8,7 @@ using Config;
 using Managers.Network;
 using System.Linq;
 using Balls;
+using Helpers;
 using UnityEngine.SceneManagement;
 
 namespace Managers
@@ -265,6 +266,7 @@ namespace Managers
 
         public void PrepareForLobbyState()
         {
+            PlayerNameLookup.ResetCachedSideNames();
             ClearBallGoalCallbacks();
             _playerSpawner?.ClearAll();
             _scoreManager = null;
@@ -308,6 +310,7 @@ namespace Managers
                 {
                     var timerObj = runner.Spawn(timerManagerPrefab, Vector3.zero, Quaternion.identity);
                     _timerManager = timerObj.GetComponent<TimerManager>();
+                    _timerManager.ResetTimer();
                     _timerManager.StartMatchCountdown();
                 }
             }

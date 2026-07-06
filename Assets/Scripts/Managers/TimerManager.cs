@@ -9,27 +9,38 @@ namespace Managers
     {
         [SerializeField] private float matchDurationSeconds = 120f;
 
-        [Networked] public float RemainingTime { get; private set; } = 120f;
-        [Networked] public bool TimerRunning { get; private set; } = false;
+        [Networked] private float _remainingTime { get; set; }
+        [Networked] private bool _timerRunning { get; set; } = false;
+
+        public float RemainingTime => _remainingTime;
+        public bool TimerRunning => _timerRunning;
 
         private Coroutine _countdownCoroutine;
 
+        public override void Spawned()
+        {
+            if (!HasStateAuthority)
+                return;
+
+            _remainingTime = matchDurationSeconds;
+        }
+
         public override void FixedUpdateNetwork()
         {
-            if (!HasStateAuthority || !TimerRunning) return;
+            if (!HasStateAuthority || !_timerRunning) return;
 
-            RemainingTime -= Runner.DeltaTime;
-            if (RemainingTime <= 0f)
+            _remainingTime -= Runner.DeltaTime;
+            if (_remainingTime <= 0f)
             {
-                RemainingTime = 0f;
-                TimerRunning = false;
+                _remainingTime = 0f;
+                _timerRunning = false;
                 Debug.Log("Time ended!");
             }
         }
 
         public void StartMatchCountdown()
         {
-            if (!HasStateAuthority || TimerRunning || _countdownCoroutine != null)
+            if (!HasStateAuthority || _timerRunning || _countdownCoroutine != null)
                 return;
 
             _countdownCoroutine = StartCoroutine(CountdownCoroutine());
@@ -38,13 +49,13 @@ namespace Managers
         private IEnumerator CountdownCoroutine()
         {
             yield return new WaitForSeconds(3f);
-            TimerRunning = true;
+            _timerRunning = true;
             _countdownCoroutine = null;
         }
 
         public void StopTimer()
         {
-            TimerRunning = false;
+            _timerRunning = false;
         }
 
         public void ResetTimer()
@@ -58,8 +69,8 @@ namespace Managers
                 _countdownCoroutine = null;
             }
 
-            TimerRunning = false;
-            RemainingTime = matchDurationSeconds;
+            _timerRunning = false;
+            _remainingTime = matchDurationSeconds;
         }
     }
 }

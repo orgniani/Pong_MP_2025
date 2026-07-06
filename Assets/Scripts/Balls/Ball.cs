@@ -1,5 +1,7 @@
 using Config;
 using Fusion;
+using Players;
+using PowerUps;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -20,11 +22,12 @@ namespace Balls
         public UnityEvent onLeftGoal;
         public UnityEvent onRightGoal;
 
-        [Networked] public float SpeedMultiplier { get; set; } = 1f;
-        [Networked] private float _powerUpTimer { get; set; } = 0f;
+        [Networked] private PlayerRef _lastHitBy { get; set; }
         [Networked] private NetworkRNG _rng { get; set; }
         [Networked] private TickTimer _launchTimer { get; set; }
         [Networked] private bool _isStopped { get; set; }
+
+        public PlayerRef LastHitBy => _lastHitBy;
 
         private BallBounce _ballBounce;
         private BallGoal _ballGoal;
@@ -55,7 +58,7 @@ namespace Balls
 
             if (!HasStateAuthority) return;
 
-            _rng = new NetworkRNG(42);
+            _rng = new NetworkRNG(Runner.Tick.Raw);
             _isStopped = false;
             _rb.position = Vector2.zero;
             _rb.linearVelocity = Vector2.zero;
@@ -84,19 +87,6 @@ namespace Balls
 
             _ballSpeed.Tick(Runner.DeltaTime);
 
-            if (SpeedMultiplier != 1f)
-            {
-                Vector2 vel = _rb.linearVelocity;
-                _rb.linearVelocity = vel.normalized * (vel.magnitude * SpeedMultiplier);
-
-                _powerUpTimer -= Runner.DeltaTime;
-                if (_powerUpTimer <= 0f)
-                {
-                    _powerUpTimer = 0f;
-                    SpeedMultiplier = 1f;
-                }
-            }
-
             var result = _ballGoal.Tick();
             if (result == GoalResult.LeftGoal)
             {
@@ -117,15 +107,24 @@ namespace Balls
 
             _isStopped = true;
             _launchTimer = TickTimer.None;
-            _powerUpTimer = 0f;
-            SpeedMultiplier = 1f;
             _rb.linearVelocity = Vector2.zero;
         }
 
         private void OnTriggerEnter2D(Collider2D other)
         {
             if (!HasStateAuthority) return;
+            if (other.GetComponent<PowerUp>() != null) return;
+
             _ballBounce.ReflectY();
+        }
+
+        private void OnCollisionEnter2D(Collision2D collision)
+        {
+            if (!HasStateAuthority) return;
+
+            var player = collision.collider.GetComponent<Player>();
+            if (player != null)
+                _lastHitBy = player.Object.InputAuthority;
         }
 
         private void LaunchBall()

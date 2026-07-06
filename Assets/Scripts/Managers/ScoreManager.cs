@@ -7,8 +7,11 @@ namespace Managers
 {
     public class ScoreManager : NetworkBehaviour
     {
-        [Networked] public int LeftScore { get; private set; }
-        [Networked] public int RightScore { get; private set; }
+        [Networked] private int _leftScore { get; set; }
+        [Networked] private int _rightScore { get; set; }
+
+        public int LeftScore => _leftScore;
+        public int RightScore => _rightScore;
 
         private ChangeDetector _changes;
 
@@ -25,8 +28,8 @@ namespace Managers
             {
                 switch (change)
                 {
-                    case nameof(LeftScore):
-                    case nameof(RightScore):
+                    case nameof(_leftScore):
+                    case nameof(_rightScore):
                         OnScoreChanged?.Invoke(LeftScore, RightScore);
                         break;
                 }
@@ -38,8 +41,8 @@ namespace Managers
             if (!HasStateAuthority)
                 return;
 
-            LeftScore = 0;
-            RightScore = 0;
+            _leftScore = 0;
+            _rightScore = 0;
         }
 
         public void RegisterLeftGoal()
@@ -47,7 +50,7 @@ namespace Managers
             if (!HasStateAuthority)
                 return;
 
-            LeftScore++;
+            _leftScore++;
         }
 
         public void RegisterRightGoal()
@@ -55,7 +58,7 @@ namespace Managers
             if (!HasStateAuthority)
                 return;
 
-            RightScore++;
+            _rightScore++;
         }
 
         public string GetMatchResultLabel()
