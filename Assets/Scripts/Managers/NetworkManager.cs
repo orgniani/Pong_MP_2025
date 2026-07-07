@@ -16,6 +16,7 @@ namespace Managers
     public class NetworkManager : MonoBehaviourSingleton<NetworkManager>, INetworkRunnerCallbacks
     {
         private const string LogPrefix = "[NetLifecycle]";
+
         [Header("References")]
         [SerializeField] private Transform[] spawnPositions;
 
@@ -52,10 +53,7 @@ namespace Managers
         {
             _networkRunner = FindFirstObjectByType<NetworkRunner>();
             if (_networkRunner == null)
-            {
-                Debug.LogWarning("No NetworkRunner found in scene!");
                 return;
-            }
 
             _networkRunner.AddCallbacks(this);
         }
@@ -84,13 +82,28 @@ namespace Managers
 
         public Transform GetSpawnPoint(int index)
         {
-            return spawnPositions[index % spawnPositions.Length];
+            TryGetSpawnPoint(index, out Transform spawnPoint);
+            return spawnPoint;
+        }
+
+        public bool TryGetSpawnPoint(int index, out Transform spawnPoint)
+        {
+            spawnPoint = null;
+
+            if (spawnPositions == null || spawnPositions.Length == 0)
+                return false;
+
+            int normalizedIndex = ((index % spawnPositions.Length) + spawnPositions.Length) % spawnPositions.Length;
+            spawnPoint = spawnPositions[normalizedIndex];
+
+            return spawnPoint != null;
         }
 
         public Vector3 GetRespawnPoint(PlayerRef player)
         {
-            int index = player.PlayerId % spawnPositions.Length;
-            return spawnPositions[index].position;
+            return TryGetSpawnPoint(player.PlayerId, out Transform spawnPoint)
+                ? spawnPoint.position
+                : Vector3.zero;
         }
 
         void INetworkRunnerCallbacks.OnShutdown (NetworkRunner runner, ShutdownReason shutdownReason)

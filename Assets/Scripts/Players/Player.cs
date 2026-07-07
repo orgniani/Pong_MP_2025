@@ -37,6 +37,7 @@ namespace Players
         private float _sizeAnimationTarget = 1f;
         private float _sizeAnimationElapsed = float.MaxValue;
         private SpriteRenderer _movementAreaRenderer;
+        private bool _isAttachedToSpawnPoint;
 
         private void Awake()
         {
@@ -47,18 +48,7 @@ namespace Players
         {
             _changes = GetChangeDetector(ChangeDetector.Source.SimulationState);
 
-            Transform spawnPoint = NetworkManager.Instance.GetSpawnPoint(_spawnPointIndex);
-            if (spawnPoint != null)
-            {
-                transform.SetParent(spawnPoint, false);
-                transform.localPosition = Vector3.zero;
-                transform.localRotation = Quaternion.identity;
-                transform.localScale = Vector3.one;
-            }
-
-            _baseLocalScale = transform.localScale;
-            ResolveMovementAreaRenderer();
-            SnapSize(SizeMultiplier);
+            TryAttachToSpawnPoint();
 
             if (Object.HasInputAuthority)
                 RPC_SetUsername(LocalPlayerSession.Username);
@@ -106,6 +96,9 @@ namespace Players
 
         private void Update()
         {
+            if (!_isAttachedToSpawnPoint)
+                TryAttachToSpawnPoint();
+
             if (!Mathf.Approximately(_sizeAnimationTarget, SizeMultiplier))
                 StartSizeAnimation(SizeMultiplier);
 
@@ -231,6 +224,26 @@ namespace Players
         private void ResolveMovementAreaRenderer()
         {
             _movementAreaRenderer = transform.parent != null ? transform.parent.GetComponent<SpriteRenderer>() : null;
+        }
+
+        private void TryAttachToSpawnPoint()
+        {
+            if (_isAttachedToSpawnPoint)
+                return;
+
+            var manager = NetworkManager.Instance;
+            if (manager == null || !manager.TryGetSpawnPoint(_spawnPointIndex, out Transform spawnPoint))
+                return;
+
+            transform.SetParent(spawnPoint, false);
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+            transform.localScale = Vector3.one;
+
+            _isAttachedToSpawnPoint = true;
+            _baseLocalScale = transform.localScale;
+            ResolveMovementAreaRenderer();
+            SnapSize(SizeMultiplier);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

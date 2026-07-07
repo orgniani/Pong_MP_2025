@@ -15,9 +15,6 @@ namespace Common
                 if (!instance)
                     instance = FindFirstObjectByType<T>();
 
-                if (!instance)
-                    instance = new GameObject(typeof(T).Name).AddComponent<T>();
-
                 return instance;
             }
         }
