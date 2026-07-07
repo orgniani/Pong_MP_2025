@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Config;
 using Fusion;
 using Fusion.Sockets;
 using UnityEngine;
@@ -69,20 +68,13 @@ namespace Managers.Network
                 return false;
             }
 
-            var lobbySceneIndex = SceneCatalog.GetLobbyIndex();
-            if (lobbySceneIndex < 0)
-            {
-                Debug.LogError("[SessionBrowserService] Could not resolve Lobby scene index from SceneCatalog.", this);
-                return false;
-            }
-
             _isBusy = true;
             try
             {
                 await ShutdownLobbyRunnerAsync();
 
                 var gameRunner = CreateRunner("NetworkRunner");
-                var ok = await _sessionHandler.StartClient(gameRunner, sessionName, lobbySceneIndex);
+                var ok = await _sessionHandler.StartClient(gameRunner, sessionName);
                 Log($"JoinSession '{sessionName}' ok={ok}");
 
                 if (!ok && gameRunner != null && gameRunner.gameObject != null)

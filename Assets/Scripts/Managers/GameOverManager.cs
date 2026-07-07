@@ -24,7 +24,6 @@ namespace Managers
             _timerManager = FindFirstObjectByType<TimerManager>();
             _ball = FindFirstObjectByType<Balls.Ball>();
 
-            Debug.Log("<color=green>NetworkGameOverManager spawned.</color>");
         }
 
         public override void FixedUpdateNetwork()

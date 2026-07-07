@@ -112,17 +112,16 @@ namespace Managers.Network
             return true;
         }
 
-        public async Task<bool> StartClient(NetworkRunner runner, string serverName, int buildIndex)
+        public async Task<bool> StartClient(NetworkRunner runner, string serverName)
         {
             runner.ProvideInput = true;
             var sessionName = string.IsNullOrWhiteSpace(serverName) ? DefaultSessionName : serverName;
 
-            Debug.Log($"{LogPrefix} client connecting: session='{sessionName}', sceneBuildIndex={buildIndex}");
+            Debug.Log($"{LogPrefix} client connecting: session='{sessionName}'");
 
             var args = new StartGameArgs()
             {
                 GameMode = GameMode.Client,
-                Scene = SceneRef.FromIndex(buildIndex),
                 SceneManager = GetOrAddSceneManager(runner),
                 SessionName = sessionName
             };
