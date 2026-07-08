@@ -1,51 +1,94 @@
-using Fusion.Sockets;
-using Fusion;
+using Managers.Network;
+using System;
+using TMPro;
 using UnityEngine;
-using System.Linq;
+using UnityEngine.UI;
 
 
 namespace UI
 {
-    public class UIWaitingRoom : MonoBehaviour, INetworkRunnerCallbacks
+    public class UIWaitingRoom : MonoBehaviour
     {
-        private NetworkRunner _runner;
+        [Header("References")]
+        [SerializeField] private TMP_Text rosterText;
+        [SerializeField] private TMP_Text waitingStatusText;
+        [SerializeField] private Button leaveButton;
+
+        [Header("Content")]
+        [SerializeField] private string waitingStatusPrefix = "Waiting for more players";
+
+        private LobbySessionState _lobbySessionState;
+
+        private void OnEnable()
+        {
+            if (leaveButton != null)
+                leaveButton.onClick.AddListener(HandleLeaveClicked);
+
+            TryBindLobbySessionState();
+            RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : new LobbySessionSnapshot(Array.Empty<string>(), 0, 0));
+        }
 
         private void Start()
         {
-            Helpers.PlayerNameLookup.ResetCachedSideNames();
-            _runner = FindFirstObjectByType<NetworkRunner>();
-            if (_runner != null)
-                _runner.AddCallbacks(this);
+            if (_lobbySessionState == null)
+            {
+                TryBindLobbySessionState();
+                RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : new LobbySessionSnapshot(Array.Empty<string>(), 0, 0));
+            }
         }
 
-        private void OnDestroy()
+        private void Update()
         {
-            if (_runner != null)
-                _runner.RemoveCallbacks(this);
+            if (_lobbySessionState != null)
+                return;
+
+            TryBindLobbySessionState();
+
+            if (_lobbySessionState != null)
+                RefreshView(_lobbySessionState.CurrentSnapshot);
         }
 
-        public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+        private void OnDisable()
         {
-            Debug.Log($"Player {player.PlayerId} joined. Total: {runner.ActivePlayers.Count()}");
+            if (_lobbySessionState != null)
+                _lobbySessionState.SnapshotChanged -= RefreshView;
+
+            if (leaveButton != null)
+                leaveButton.onClick.RemoveListener(HandleLeaveClicked);
+
+            _lobbySessionState = null;
         }
 
-        public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
-        public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
-        public void OnConnectedToServer(NetworkRunner runner) { }
-        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
-        public void OnInput(NetworkRunner runner, NetworkInput input) { }
-        public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
-        public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
-        public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
-        public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
-        public void OnSessionListUpdated(NetworkRunner runner, System.Collections.Generic.List<SessionInfo> sessionList) { }
-        public void OnCustomAuthenticationResponse(NetworkRunner runner, System.Collections.Generic.Dictionary<string, object> data) { }
-        public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-        public void OnSceneLoadDone(NetworkRunner runner) { }
-        public void OnSceneLoadStart(NetworkRunner runner) { }
-        public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
-        public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
-        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, System.ArraySegment<byte> data) { }
-        public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
+        private void TryBindLobbySessionState()
+        {
+            if (_lobbySessionState != null)
+                return;
+
+            _lobbySessionState = LobbySessionState.FindRunnerOwnedInstance();
+
+            if (_lobbySessionState != null)
+                _lobbySessionState.SnapshotChanged += RefreshView;
+        }
+
+        private void RefreshView(LobbySessionSnapshot snapshot)
+        {
+            if (rosterText != null)
+                rosterText.text = snapshot.WaitingUsernames != null && snapshot.WaitingUsernames.Length > 0
+                    ? string.Join(Environment.NewLine, snapshot.WaitingUsernames)
+                    : string.Empty;
+
+            if (waitingStatusText != null)
+            {
+                var counter = $"{snapshot.CurrentPlayerCount}/{snapshot.TargetPlayerCapacity}";
+                waitingStatusText.text = string.IsNullOrWhiteSpace(waitingStatusPrefix)
+                    ? counter
+                    : $"{waitingStatusPrefix.Trim()} ({counter})";
+            }
+        }
+
+        private void HandleLeaveClicked()
+        {
+            SessionExitToMainMenu.Execute("[UIWaitingRoom]");
+        }
     }
 }

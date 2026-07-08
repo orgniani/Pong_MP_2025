@@ -42,8 +42,7 @@ namespace Managers
 
         public event Action OnConnected;
         public event Action OnDisconnected;
-        public event Action<string> OnNewPlayerJoined;
-        public event Action<string> OnJoinedPlayerLeft;
+        public event Action OnRosterChanged;
 
         public NetworkPlayerSpawner PlayerSpawner => _playerSpawner;
         public GameOverManager GameOverManager => _gameOverManager;
@@ -51,11 +50,11 @@ namespace Managers
 
         private void Awake()
         {
-            _networkRunner = FindFirstObjectByType<NetworkRunner>();
-            if (_networkRunner == null)
+            var runner = FindFirstObjectByType<NetworkRunner>();
+            if (runner == null)
                 return;
 
-            _networkRunner.AddCallbacks(this);
+            BindRunner(runner);
         }
 
         private void OnDestroy()
@@ -78,6 +77,20 @@ namespace Managers
                 return;
 
             _networkRunner.Shutdown();
+        }
+
+        public bool BindRunner(NetworkRunner runner)
+        {
+            if (runner == null)
+                return false;
+
+            if (_networkRunner == runner)
+                return false;
+
+            _networkRunner?.RemoveCallbacks(this);
+            _networkRunner = runner;
+            _networkRunner.AddCallbacks(this);
+            return true;
         }
 
         public Transform GetSpawnPoint(int index)
@@ -142,7 +155,7 @@ namespace Managers
                 }
             }
 
-            OnNewPlayerJoined?.Invoke("Player_" + player.PlayerId);
+            OnRosterChanged?.Invoke();
         }
 
         void INetworkRunnerCallbacks.OnPlayerLeft(NetworkRunner runner, PlayerRef player)
@@ -172,7 +185,7 @@ namespace Managers
                 }
             }
 
-            OnJoinedPlayerLeft?.Invoke("Player_" + player.PlayerId);
+            OnRosterChanged?.Invoke();
         }
 
         void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner)
