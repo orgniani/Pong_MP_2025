@@ -9,7 +9,7 @@ namespace UI
     public static class UIGameModeFilterExtensions
     {
         private const int OneVsOneMaxPlayers = 2;
-        private const int TwoVsTwoMaxPlayers = 4;
+        public const int TwoVsTwoMaxPlayers = 4;
         private const int DedicatedServerSlot = 1;
 
         public static int ToMaxPlayers(this UIGameModeFilter mode)

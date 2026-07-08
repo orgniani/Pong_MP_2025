@@ -52,9 +52,6 @@ namespace Managers.Network
                 _runner = runner;
             }
 
-            if (!_lobbyRosterPrefab.IsValid)
-                _lobbyRosterPrefab = LobbyRosterConfig.ResolveLobbyRosterPrefab();
-
             _lobbySessionState = LobbySessionState.EnsureOnRunner(_runner);
 
             if (!_callbacksRegistered)
@@ -64,10 +61,13 @@ namespace Managers.Network
             }
 
             if (IsLobbySceneActive())
-            {
-                EnsureRosterSpawned();
-                _lobbySessionState.RefreshFromRunner(_runner);
-            }
+                EnterLobbyState();
+        }
+
+        private void EnterLobbyState()
+        {
+            EnsureRosterSpawned();
+            _lobbySessionState?.RefreshFromRunner(_runner);
         }
 
         private void UnregisterCallbacks()
@@ -81,10 +81,13 @@ namespace Managers.Network
 
         private void EnsureRosterSpawned()
         {
-            if (_runner == null || !_runner.IsServer || !_lobbyRosterPrefab.IsValid)
+            if (_runner == null || !_runner.IsServer || LobbyRosterState.ActiveInstance != null)
                 return;
 
-            if (LobbyRosterState.ActiveInstance != null)
+            if (!_lobbyRosterPrefab.IsValid)
+                _lobbyRosterPrefab = LobbyRosterConfig.ResolveLobbyRosterPrefab();
+
+            if (!_lobbyRosterPrefab.IsValid)
                 return;
 
             _runner.Spawn(_lobbyRosterPrefab);
@@ -102,11 +105,8 @@ namespace Managers.Network
 
         public void OnSceneLoadDone(NetworkRunner runner)
         {
-            if (!IsLobbySceneActive())
-                return;
-
-            EnsureRosterSpawned();
-            _lobbySessionState?.RefreshFromRunner(runner);
+            if (IsLobbySceneActive())
+                EnterLobbyState();
         }
 
         public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
@@ -123,11 +123,7 @@ namespace Managers.Network
             return SceneManager.GetActiveScene().buildIndex == SceneCatalog.GetLobbyIndex();
         }
 
-        public void OnConnectedToServer(NetworkRunner runner)
-        {
-            if (IsLobbySceneActive())
-                _lobbySessionState?.RefreshFromRunner(runner);
-        }
+        public void OnConnectedToServer(NetworkRunner runner) { }
         public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
         public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
         public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }

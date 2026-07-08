@@ -92,30 +92,22 @@ namespace Managers.Network
             return Encoding.UTF8.GetBytes(UsernameTokenPrefix + NormalizeUsername(username));
         }
 
-        public string HandlePlayerJoined(NetworkRunner runner, PlayerRef player)
+        public void HandlePlayerJoined(NetworkRunner runner, PlayerRef player)
         {
             if (runner == null || !runner.IsServer)
-                return CreateFallbackPlayerName(player);
+                return;
 
-            var username = ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
-            _waitingUsernames[player] = username;
+            _waitingUsernames[player] = ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
             PublishRoster(runner);
-            return username;
         }
 
-        public string HandlePlayerLeft(NetworkRunner runner, PlayerRef player)
+        public void HandlePlayerLeft(NetworkRunner runner, PlayerRef player)
         {
-            var username = _waitingUsernames.TryGetValue(player, out var existing)
-                ? existing
-                : CreateFallbackPlayerName(player);
+            if (runner == null || !runner.IsServer)
+                return;
 
-            if (runner != null && runner.IsServer)
-            {
-                _waitingUsernames.Remove(player);
-                PublishRoster(runner);
-            }
-
-            return username;
+            _waitingUsernames.Remove(player);
+            PublishRoster(runner);
         }
 
         public void RefreshFromRunner(NetworkRunner runner)

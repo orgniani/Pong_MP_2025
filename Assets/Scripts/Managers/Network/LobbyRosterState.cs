@@ -1,12 +1,13 @@
 using System;
 using System.Collections.Generic;
 using Fusion;
+using UI;
 
 namespace Managers.Network
 {
     public sealed class LobbyRosterState : NetworkBehaviour
     {
-        public const int MaxRosterSize = 4;
+        public const int MaxRosterSize = UIGameModeFilterExtensions.TwoVsTwoMaxPlayers;
 
         [Networked, Capacity(MaxRosterSize)]
         private NetworkArray<NetworkString<_16>> Usernames => default;
@@ -36,12 +37,17 @@ namespace Managers.Network
 
         public override void Render()
         {
-            var changed = false;
-            foreach (var _ in _changes.DetectChanges(this))
-                changed = true;
-
-            if (changed)
-                SnapshotChanged?.Invoke(BuildSnapshot());
+            foreach (var change in _changes.DetectChanges(this))
+            {
+                switch (change)
+                {
+                    case nameof(Usernames):
+                    case nameof(_currentPlayerCount):
+                    case nameof(_targetPlayerCapacity):
+                        SnapshotChanged?.Invoke(BuildSnapshot());
+                        break;
+                }
+            }
         }
 
         public void SetRoster(IReadOnlyList<string> usernames, int currentPlayerCount, int targetPlayerCapacity)
