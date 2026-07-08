@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Config;
 using Fusion;
 using UI;
 using UnityEngine;
@@ -12,6 +13,7 @@ namespace Managers.Network
     {
         private const string UsernameTokenPrefix = "lobby-username:";
         private const string FallbackUsername = "Player";
+        private static readonly LobbySessionSnapshot EmptySnapshot = new(Array.Empty<string>(), 0, 0);
         private static LobbySessionState _activeInstance;
         private static int _activationSequence;
         private NetworkRunner _runner;
@@ -22,8 +24,10 @@ namespace Managers.Network
 
         public event Action<LobbySessionSnapshot> SnapshotChanged;
 
+        public static LobbySessionState ActiveInstance => ResolvePreferredInstance();
+
         public LobbySessionSnapshot CurrentSnapshot =>
-            _rosterState != null ? _rosterState.BuildSnapshot() : new LobbySessionSnapshot(Array.Empty<string>(), 0, 0);
+            _rosterState != null ? _rosterState.BuildSnapshot() : EmptySnapshot;
 
         public NetworkRunner Runner => _runner != null ? _runner : (_runner = GetComponent<NetworkRunner>());
 
@@ -39,19 +43,19 @@ namespace Managers.Network
 
         public static LobbySessionState FindRunnerOwnedInstance()
         {
-            if (IsUsable(_activeInstance))
-                return _activeInstance;
+            return ResolvePreferredInstance();
+        }
 
-            var resolved = FindObjectsByType<LobbySessionState>(FindObjectsSortMode.InstanceID)
-                .Where(IsUsable)
+        public static LobbySessionState FindForRunner(NetworkRunner runner)
+        {
+            if (runner == null)
+                return null;
+
+            return FindObjectsByType<LobbySessionState>(FindObjectsSortMode.InstanceID)
+                .Where(state => IsUsable(state) && state.Runner == runner)
                 .OrderByDescending(state => state.Runner.IsRunning)
                 .ThenByDescending(state => state._activationOrder)
                 .FirstOrDefault();
-
-            if (resolved != null)
-                resolved.MarkAsActive();
-
-            return resolved;
         }
 
         private void Awake()
@@ -62,20 +66,14 @@ namespace Managers.Network
         private void OnEnable()
         {
             MarkAsActive();
+            LobbyRosterState.ActiveInstanceChanged += RefreshRosterBinding;
+            RefreshRosterBinding(LobbyRosterState.ActiveInstance);
         }
 
-        private void Update()
+        private void OnDisable()
         {
-            if (_rosterState != null)
-                return;
-
-            var resolved = LobbyRosterState.ActiveInstance;
-            if (resolved == null)
-                return;
-
-            _rosterState = resolved;
-            _rosterState.SnapshotChanged += HandleRosterSnapshotChanged;
-            HandleRosterSnapshotChanged(_rosterState.BuildSnapshot());
+            LobbyRosterState.ActiveInstanceChanged -= RefreshRosterBinding;
+            UnbindRosterState();
         }
 
         private void OnDestroy()
@@ -83,8 +81,8 @@ namespace Managers.Network
             if (ReferenceEquals(_activeInstance, this))
                 _activeInstance = null;
 
-            if (_rosterState != null)
-                _rosterState.SnapshotChanged -= HandleRosterSnapshotChanged;
+            LobbyRosterState.ActiveInstanceChanged -= RefreshRosterBinding;
+            UnbindRosterState();
         }
 
         public static byte[] CreateConnectionToken(string username)
@@ -119,17 +117,35 @@ namespace Managers.Network
             PublishRoster(runner);
         }
 
-        public void PublishAuthoritativeSnapshot(NetworkRunner runner)
+        public void EnterLobby(NetworkRunner runner, LobbyRosterConfig lobbyRosterConfig)
         {
-            RefreshFromRunner(runner);
+            if (runner == null)
+                return;
+
+            _runner = runner;
+            MarkAsActive();
+
+            if (_runner.IsServer)
+                EnsureRosterSpawned(lobbyRosterConfig);
+
+            RefreshRosterBinding(LobbyRosterState.ActiveInstance);
+
+            if (_runner.IsServer)
+                RefreshFromRunner(_runner);
+            else if (_rosterState == null)
+                SnapshotChanged?.Invoke(CurrentSnapshot);
         }
 
         public void ResetState()
         {
             _waitingUsernames.Clear();
+            var rosterState = _rosterState;
+            UnbindRosterState();
+
+            SnapshotChanged?.Invoke(EmptySnapshot);
 
             if (_runner != null && _runner.IsServer)
-                LobbyRosterState.ActiveInstance?.SetRoster(Array.Empty<string>(), 0, 0);
+                rosterState?.SetRoster(Array.Empty<string>(), 0, 0);
         }
 
         private void MarkAsActive()
@@ -146,6 +162,79 @@ namespace Managers.Network
             return state != null && state.Runner != null;
         }
 
+        private static LobbySessionState ResolvePreferredInstance()
+        {
+            var resolved = FindObjectsByType<LobbySessionState>(FindObjectsSortMode.InstanceID)
+                .Where(IsUsable)
+                .OrderByDescending(state => state.Runner.IsRunning)
+                .ThenByDescending(state => ReferenceEquals(state, _activeInstance))
+                .ThenByDescending(state => state._activationOrder)
+                .FirstOrDefault();
+
+            if (resolved != null && !ReferenceEquals(_activeInstance, resolved))
+                resolved.MarkAsActive();
+
+            return resolved;
+        }
+
+        private void EnsureRosterSpawned(LobbyRosterConfig lobbyRosterConfig)
+        {
+            if (_runner == null || !_runner.IsServer || LobbyRosterState.FindForRunner(_runner) != null)
+                return;
+
+            var lobbyRosterPrefab = lobbyRosterConfig != null
+                ? lobbyRosterConfig.LobbyRosterPrefab
+                : LobbyRosterConfig.ResolveLobbyRosterPrefabFallback();
+
+            if (!lobbyRosterPrefab.IsValid)
+                return;
+
+            _runner.Spawn(lobbyRosterPrefab);
+        }
+
+        private void RefreshRosterBinding(LobbyRosterState _)
+        {
+            var rosterState = ResolveRosterStateForRunner();
+
+            if (ReferenceEquals(_rosterState, rosterState))
+            {
+                if (_rosterState == null)
+                    SnapshotChanged?.Invoke(CurrentSnapshot);
+
+                return;
+            }
+
+            UnbindRosterState();
+            _rosterState = rosterState;
+
+            if (_rosterState == null)
+            {
+                SnapshotChanged?.Invoke(CurrentSnapshot);
+                return;
+            }
+
+            _rosterState.SnapshotChanged += HandleRosterSnapshotChanged;
+            HandleRosterSnapshotChanged(_rosterState.BuildSnapshot());
+
+            if (_runner != null && _runner.IsServer)
+                PublishRoster(_runner);
+        }
+
+        private void UnbindRosterState()
+        {
+            if (_rosterState == null)
+                return;
+
+            _rosterState.SnapshotChanged -= HandleRosterSnapshotChanged;
+            _rosterState = null;
+        }
+
+        private LobbyRosterState ResolveRosterStateForRunner()
+        {
+            var runner = Runner;
+            return runner != null ? LobbyRosterState.FindForRunner(runner) : null;
+        }
+
         private void SynchronizeServerRoster(NetworkRunner runner)
         {
             _waitingUsernames.Clear();
@@ -155,8 +244,7 @@ namespace Managers.Network
 
         private void PublishRoster(NetworkRunner runner)
         {
-            var rosterState = LobbyRosterState.ActiveInstance;
-            if (rosterState == null)
+            if (_rosterState == null)
                 return;
 
             var orderedUsernames = _waitingUsernames
@@ -164,7 +252,7 @@ namespace Managers.Network
                 .Select(entry => NormalizeUsername(entry.Value))
                 .ToArray();
 
-            rosterState.SetRoster(orderedUsernames, runner.ActivePlayers.Count(), ResolveTargetPlayerCapacity(runner));
+            _rosterState.SetRoster(orderedUsernames, runner.ActivePlayers.Count(), ResolveTargetPlayerCapacity(runner));
         }
 
         private void HandleRosterSnapshotChanged(LobbySessionSnapshot snapshot)

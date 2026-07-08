@@ -24,39 +24,56 @@ namespace UI
             if (leaveButton != null)
                 leaveButton.onClick.AddListener(HandleLeaveClicked);
 
-            TryBindLobbySessionState();
-            RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : new LobbySessionSnapshot(Array.Empty<string>(), 0, 0));
+            if (_lobbySessionState != null)
+                RefreshView(_lobbySessionState.CurrentSnapshot);
+            else
+                TryBindLobbySessionState();
         }
 
         private void Start()
-        {
-            if (_lobbySessionState == null)
-            {
-                TryBindLobbySessionState();
-                RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : new LobbySessionSnapshot(Array.Empty<string>(), 0, 0));
-            }
-        }
-
-        private void Update()
         {
             if (_lobbySessionState != null)
                 return;
 
             TryBindLobbySessionState();
-
-            if (_lobbySessionState != null)
-                RefreshView(_lobbySessionState.CurrentSnapshot);
         }
 
         private void OnDisable()
         {
-            if (_lobbySessionState != null)
-                _lobbySessionState.SnapshotChanged -= RefreshView;
-
             if (leaveButton != null)
                 leaveButton.onClick.RemoveListener(HandleLeaveClicked);
 
+            Unbind();
+        }
+
+        public void Bind(LobbySessionState lobbySessionState)
+        {
+            if (ReferenceEquals(_lobbySessionState, lobbySessionState))
+            {
+                RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : CreateEmptySnapshot());
+                return;
+            }
+
+            Unbind();
+            _lobbySessionState = lobbySessionState;
+
+            if (_lobbySessionState != null)
+            {
+                _lobbySessionState.SnapshotChanged += RefreshView;
+                RefreshView(_lobbySessionState.CurrentSnapshot);
+                return;
+            }
+
+            RefreshView(CreateEmptySnapshot());
+        }
+
+        public void Unbind()
+        {
+            if (_lobbySessionState != null)
+                _lobbySessionState.SnapshotChanged -= RefreshView;
+
             _lobbySessionState = null;
+            RefreshView(CreateEmptySnapshot());
         }
 
         private void TryBindLobbySessionState()
@@ -64,10 +81,12 @@ namespace UI
             if (_lobbySessionState != null)
                 return;
 
-            _lobbySessionState = LobbySessionState.FindRunnerOwnedInstance();
-
-            if (_lobbySessionState != null)
-                _lobbySessionState.SnapshotChanged += RefreshView;
+            if (!LobbySceneCompositionRoot.TryBindWaitingRoom(this))
+            {
+                var resolved = LobbySessionState.ActiveInstance ?? LobbySessionState.FindRunnerOwnedInstance();
+                if (resolved != null)
+                    Bind(resolved);
+            }
         }
 
         private void RefreshView(LobbySessionSnapshot snapshot)
@@ -89,6 +108,11 @@ namespace UI
         private void HandleLeaveClicked()
         {
             SessionExitToMainMenu.Execute("[UIWaitingRoom]");
+        }
+
+        private static LobbySessionSnapshot CreateEmptySnapshot()
+        {
+            return new LobbySessionSnapshot(Array.Empty<string>(), 0, 0);
         }
     }
 }

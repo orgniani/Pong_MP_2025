@@ -6,18 +6,18 @@ namespace Config
     [CreateAssetMenu(fileName = "LobbyRosterConfig", menuName = "Config/Lobby Roster Config")]
     public sealed class LobbyRosterConfig : ScriptableObject
     {
-        private const string ResourcesPath = "LobbyRosterConfig";
+        private const string FallbackResourcesPath = "LobbyRosterConfig";
 
         [SerializeField] private NetworkPrefabRef lobbyRosterPrefab;
 
         public NetworkPrefabRef LobbyRosterPrefab => lobbyRosterPrefab;
 
-        public static NetworkPrefabRef ResolveLobbyRosterPrefab()
+        public static NetworkPrefabRef ResolveLobbyRosterPrefabFallback()
         {
-            var config = Resources.Load<LobbyRosterConfig>(ResourcesPath);
+            var config = Resources.Load<LobbyRosterConfig>(FallbackResourcesPath);
             if (config == null)
             {
-                Debug.LogError($"[LobbyRosterConfig] Could not load '{ResourcesPath}' from Resources. Create it via Assets > Create > Pong > Lobby Roster Config.");
+                Debug.LogError($"[LobbyRosterConfig] Fallback load failed for '{FallbackResourcesPath}'. Assign LobbyRosterConfig through LobbySceneCompositionRoot in the Lobby scene.");
                 return default;
             }
 

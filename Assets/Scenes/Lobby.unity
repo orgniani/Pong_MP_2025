@@ -147,8 +147,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_SendPointerHoverToParent: 1
   m_MoveRepeatDelay: 0.5
   m_MoveRepeatRate: 0.1
@@ -178,8 +178,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name: ""
+  m_EditorClassIdentifier: ""
   m_FirstSelected: {fileID: 0}
   m_sendNavigationEvents: 1
   m_DragThreshold: 10
@@ -211,6 +211,7 @@ GameObject:
   - component: {fileID: 219999636}
   - component: {fileID: 219999635}
   - component: {fileID: 219999634}
+  - component: {fileID: 219999639}
   m_Layer: 5
   m_Name: WaitingRoomCanvas
   m_TagString: Untagged
@@ -234,6 +235,20 @@ MonoBehaviour:
   waitingStatusText: {fileID: 1398463478}
   leaveButton: {fileID: 1146340971}
   waitingStatusPrefix: waiting for more players
+--- !u!114 &219999639
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 219999633}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9b2d4cf6e7d54179a1a49330f34fa2b7, type: 3}
+  m_Name: ""
+  m_EditorClassIdentifier: ""
+  lobbyRosterConfig: {fileID: 11400000, guid: 98e685035d7f3cc4b8ceb228ca23c511, type: 2}
+  waitingRoom: {fileID: 219999634}
 --- !u!114 &219999635
 MonoBehaviour:
   m_ObjectHideFlags: 0

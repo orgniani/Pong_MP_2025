@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Fusion;
 using UI;
+using UnityEngine;
 
 namespace Managers.Network
 {
@@ -20,19 +22,36 @@ namespace Managers.Network
 
         public event Action<LobbySessionSnapshot> SnapshotChanged;
 
+        public static event Action<LobbyRosterState> ActiveInstanceChanged;
+
         public static LobbyRosterState ActiveInstance =>
             _activeInstance != null && _activeInstance.Object != null ? _activeInstance : null;
+
+        public static LobbyRosterState FindForRunner(NetworkRunner runner)
+        {
+            if (runner == null)
+                return null;
+
+            return UnityEngine.Object.FindObjectsByType<LobbyRosterState>(FindObjectsSortMode.InstanceID)
+                .Where(state => state != null && state.Object != null && state.Runner == runner)
+                .OrderByDescending(state => state.Object.HasStateAuthority)
+                .FirstOrDefault();
+        }
 
         public override void Spawned()
         {
             _activeInstance = this;
             _changes = GetChangeDetector(ChangeDetector.Source.SimulationState);
+            ActiveInstanceChanged?.Invoke(this);
         }
 
         public override void Despawned(NetworkRunner runner, bool hasState)
         {
             if (ReferenceEquals(_activeInstance, this))
+            {
                 _activeInstance = null;
+                ActiveInstanceChanged?.Invoke(null);
+            }
         }
 
         public override void Render()

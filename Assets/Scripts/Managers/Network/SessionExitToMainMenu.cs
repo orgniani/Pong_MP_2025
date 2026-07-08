@@ -23,7 +23,8 @@ namespace Managers.Network
             try
             {
                 PlayerNameLookup.ResetCachedSideNames();
-                LobbySessionState.FindRunnerOwnedInstance()?.ResetState();
+                var lobbySessionState = LobbySessionState.ActiveInstance ?? LobbySessionState.FindRunnerOwnedInstance();
+                lobbySessionState?.ResetState();
                 await CleanupLocalRunnersAsync(logPrefix);
 
                 var index = SceneCatalog.GetMainMenuIndex(-1);
@@ -43,7 +44,7 @@ namespace Managers.Network
 
         private static async Task CleanupLocalRunnersAsync(string logPrefix)
         {
-            var activeRunner = LobbySessionState.FindRunnerOwnedInstance()?.Runner;
+            var activeRunner = (LobbySessionState.ActiveInstance ?? LobbySessionState.FindRunnerOwnedInstance())?.Runner;
             var runners = UnityEngine.Object.FindObjectsByType<NetworkRunner>(FindObjectsSortMode.InstanceID)
                 .Where(runner => runner != null && (!runner.IsServer || !Application.isBatchMode))
                 .OrderByDescending(runner => runner == activeRunner)

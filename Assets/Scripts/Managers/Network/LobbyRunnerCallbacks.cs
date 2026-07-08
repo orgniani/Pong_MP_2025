@@ -13,7 +13,6 @@ namespace Managers.Network
     {
         private NetworkRunner _runner;
         private LobbySessionState _lobbySessionState;
-        private NetworkPrefabRef _lobbyRosterPrefab;
         private bool _callbacksRegistered;
 
         public static LobbyRunnerCallbacks EnsureOnRunner(NetworkRunner runner)
@@ -66,8 +65,13 @@ namespace Managers.Network
 
         private void EnterLobbyState()
         {
-            EnsureRosterSpawned();
-            _lobbySessionState?.RefreshFromRunner(_runner);
+            _lobbySessionState = LobbySessionState.EnsureOnRunner(_runner);
+
+            if (!LobbySceneCompositionRoot.TryCompose(_runner))
+            {
+                _lobbySessionState?.EnterLobby(_runner, null);
+                LobbySceneCompositionRoot.TryBindWaitingRoom(_lobbySessionState);
+            }
         }
 
         private void UnregisterCallbacks()
@@ -77,20 +81,6 @@ namespace Managers.Network
 
             _runner.RemoveCallbacks(this);
             _callbacksRegistered = false;
-        }
-
-        private void EnsureRosterSpawned()
-        {
-            if (_runner == null || !_runner.IsServer || LobbyRosterState.ActiveInstance != null)
-                return;
-
-            if (!_lobbyRosterPrefab.IsValid)
-                _lobbyRosterPrefab = LobbyRosterConfig.ResolveLobbyRosterPrefab();
-
-            if (!_lobbyRosterPrefab.IsValid)
-                return;
-
-            _runner.Spawn(_lobbyRosterPrefab);
         }
 
         public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
