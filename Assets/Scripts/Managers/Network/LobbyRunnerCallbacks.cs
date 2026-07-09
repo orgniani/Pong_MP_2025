@@ -67,11 +67,13 @@ namespace Managers.Network
         {
             _lobbySessionState = LobbySessionState.EnsureOnRunner(_runner);
 
-            if (!LobbySceneCompositionRoot.TryCompose(_runner))
+            if (!LobbySceneCompositionRoot.TryGetActive(out var compositionRoot))
             {
-                _lobbySessionState?.EnterLobby(_runner, null);
-                LobbySceneCompositionRoot.TryBindWaitingRoom(_lobbySessionState);
+                Debug.LogError("[LobbyRunnerCallbacks] Lobby scene is active but LobbySceneCompositionRoot was not found in the active scene.", this);
+                return;
             }
+
+            compositionRoot.Compose(_runner);
         }
 
         private void UnregisterCallbacks()

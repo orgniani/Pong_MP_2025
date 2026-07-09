@@ -9,6 +9,8 @@ namespace UI
 {
     public class UIWaitingRoom : MonoBehaviour
     {
+        public event Action Enabled;
+
         [Header("References")]
         [SerializeField] private TMP_Text rosterText;
         [SerializeField] private TMP_Text waitingStatusText;
@@ -24,18 +26,7 @@ namespace UI
             if (leaveButton != null)
                 leaveButton.onClick.AddListener(HandleLeaveClicked);
 
-            if (_lobbySessionState != null)
-                RefreshView(_lobbySessionState.CurrentSnapshot);
-            else
-                TryBindLobbySessionState();
-        }
-
-        private void Start()
-        {
-            if (_lobbySessionState != null)
-                return;
-
-            TryBindLobbySessionState();
+            Enabled?.Invoke();
         }
 
         private void OnDisable()
@@ -74,19 +65,6 @@ namespace UI
 
             _lobbySessionState = null;
             RefreshView(CreateEmptySnapshot());
-        }
-
-        private void TryBindLobbySessionState()
-        {
-            if (_lobbySessionState != null)
-                return;
-
-            if (!LobbySceneCompositionRoot.TryBindWaitingRoom(this))
-            {
-                var resolved = LobbySessionState.ActiveInstance ?? LobbySessionState.FindRunnerOwnedInstance();
-                if (resolved != null)
-                    Bind(resolved);
-            }
         }
 
         private void RefreshView(LobbySessionSnapshot snapshot)

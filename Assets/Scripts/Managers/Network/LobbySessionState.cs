@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using Config;
 using Fusion;
 using UI;
 using UnityEngine;
@@ -39,11 +38,6 @@ namespace Managers.Network
             var state = runner.GetComponent<LobbySessionState>() ?? runner.gameObject.AddComponent<LobbySessionState>();
             state.MarkAsActive();
             return state;
-        }
-
-        public static LobbySessionState FindRunnerOwnedInstance()
-        {
-            return ResolvePreferredInstance();
         }
 
         public static LobbySessionState FindForRunner(NetworkRunner runner)
@@ -117,7 +111,7 @@ namespace Managers.Network
             PublishRoster(runner);
         }
 
-        public void EnterLobby(NetworkRunner runner, LobbyRosterConfig lobbyRosterConfig)
+        public void EnterLobby(NetworkRunner runner, NetworkPrefabRef lobbyRosterStatePrefab)
         {
             if (runner == null)
                 return;
@@ -126,7 +120,7 @@ namespace Managers.Network
             MarkAsActive();
 
             if (_runner.IsServer)
-                EnsureRosterSpawned(lobbyRosterConfig);
+                EnsureRosterSpawned(lobbyRosterStatePrefab);
 
             RefreshRosterBinding(LobbyRosterState.ActiveInstance);
 
@@ -177,19 +171,18 @@ namespace Managers.Network
             return resolved;
         }
 
-        private void EnsureRosterSpawned(LobbyRosterConfig lobbyRosterConfig)
+        private void EnsureRosterSpawned(NetworkPrefabRef lobbyRosterStatePrefab)
         {
             if (_runner == null || !_runner.IsServer || LobbyRosterState.FindForRunner(_runner) != null)
                 return;
 
-            var lobbyRosterPrefab = lobbyRosterConfig != null
-                ? lobbyRosterConfig.LobbyRosterPrefab
-                : LobbyRosterConfig.ResolveLobbyRosterPrefabFallback();
-
-            if (!lobbyRosterPrefab.IsValid)
+            if (!lobbyRosterStatePrefab.IsValid)
+            {
+                Debug.LogError("[LobbySessionState] Lobby roster spawn failed because the lobby roster prefab is missing or invalid. Assign it directly on LobbySceneCompositionRoot in the Lobby scene.", this);
                 return;
+            }
 
-            _runner.Spawn(lobbyRosterPrefab);
+            _runner.Spawn(lobbyRosterStatePrefab);
         }
 
         private void RefreshRosterBinding(LobbyRosterState _)

@@ -1,4 +1,3 @@
-using Config;
 using System.Linq;
 using Fusion;
 using UI;
@@ -11,7 +10,7 @@ namespace Managers.Network
     public sealed class LobbySceneCompositionRoot : MonoBehaviour
     {
         [Header("References")]
-        [SerializeField] private LobbyRosterConfig lobbyRosterConfig;
+        [SerializeField] private NetworkPrefabRef lobbyRosterStatePrefab;
         [SerializeField] private UIWaitingRoom waitingRoom;
 
         private NetworkRunner _composedRunner;
@@ -24,15 +23,14 @@ namespace Managers.Network
 
         private void Awake()
         {
-            if (waitingRoom == null)
-                waitingRoom = GetComponent<UIWaitingRoom>();
-
             MarkAsActive();
+            SubscribeWaitingRoomLifecycle();
         }
 
         private void OnEnable()
         {
             MarkAsActive();
+            SubscribeWaitingRoomLifecycle();
 
             if (_composedRunner != null)
                 Compose(_composedRunner);
@@ -40,6 +38,8 @@ namespace Managers.Network
 
         private void OnDisable()
         {
+            UnsubscribeWaitingRoomLifecycle();
+
             if (ReferenceEquals(_activeInstance, this))
                 _activeInstance = null;
 
@@ -49,50 +49,87 @@ namespace Managers.Network
         public void Compose(NetworkRunner runner)
         {
             if (runner == null)
+            {
+                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because runner is null.", this);
                 return;
+            }
 
             MarkAsActive();
 
+            if (!ValidateCompositionReferences(runner))
+                return;
+
             _composedRunner = runner;
             _composedSessionState = LobbySessionState.EnsureOnRunner(runner);
-            _composedSessionState?.EnterLobby(runner, lobbyRosterConfig);
 
-            if (waitingRoom != null && _composedSessionState != null)
-                waitingRoom.Bind(_composedSessionState);
+            if (_composedSessionState == null)
+            {
+                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because LobbySessionState could not be resolved for the runner.", this);
+                return;
+            }
+
+            _composedSessionState?.EnterLobby(runner, lobbyRosterStatePrefab);
+            waitingRoom.Bind(_composedSessionState);
         }
 
-        public static bool TryCompose(NetworkRunner runner)
+        internal static bool TryGetActive(out LobbySceneCompositionRoot root)
         {
-            var root = ResolveActiveRoot();
+            root = ResolveActiveRoot();
             if (root == null)
                 return false;
 
-            root.Compose(runner);
             return true;
         }
 
-        public static bool TryBindWaitingRoom(LobbySessionState lobbySessionState)
+        private void SubscribeWaitingRoomLifecycle()
         {
-            return TryBindWaitingRoom(ResolveWaitingRoom(), lobbySessionState);
+            if (waitingRoom == null)
+                return;
+
+            waitingRoom.Enabled -= HandleWaitingRoomEnabled;
+            waitingRoom.Enabled += HandleWaitingRoomEnabled;
         }
 
-        public static bool TryBindWaitingRoom(UIWaitingRoom targetWaitingRoom)
+        private void UnsubscribeWaitingRoomLifecycle()
         {
-            return TryBindWaitingRoom(targetWaitingRoom, ResolveLobbySessionState());
+            if (waitingRoom != null)
+                waitingRoom.Enabled -= HandleWaitingRoomEnabled;
         }
 
-        private static bool TryBindWaitingRoom(UIWaitingRoom targetWaitingRoom, LobbySessionState lobbySessionState)
+        private void HandleWaitingRoomEnabled()
         {
-            if (targetWaitingRoom == null || lobbySessionState == null || !IsInActiveScene(targetWaitingRoom))
-                return false;
+            if (_composedSessionState == null)
+                return;
 
-            targetWaitingRoom.Bind(lobbySessionState);
-            return true;
+            waitingRoom.Bind(_composedSessionState);
         }
 
         private void MarkAsActive()
         {
             _activeInstance = this;
+        }
+
+        private bool ValidateCompositionReferences(NetworkRunner runner)
+        {
+            if (!IsInActiveScene(this))
+            {
+                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because the composition root is not in the active scene.", this);
+                return false;
+            }
+
+            if (waitingRoom == null)
+            {
+                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because UIWaitingRoom is not assigned. Wire the waiting room through the Lobby scene composition root.", this);
+                return false;
+            }
+
+            if (runner.IsServer && !lobbyRosterStatePrefab.IsValid)
+            {
+                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because the lobby roster prefab is not assigned for the host runner. Wire the roster prefab directly through the Lobby scene composition root.", this);
+                return false;
+            }
+
+            return true;
         }
 
         private static LobbySceneCompositionRoot ResolveActiveRoot()
@@ -106,30 +143,6 @@ namespace Managers.Network
 
             _activeInstance = resolved;
             return resolved;
-        }
-
-        private static UIWaitingRoom ResolveWaitingRoom()
-        {
-            var root = ResolveActiveRoot();
-            if (root != null && root.waitingRoom != null)
-                return root.waitingRoom;
-
-            return FindFirstInActiveScene<UIWaitingRoom>();
-        }
-
-        private static LobbySessionState ResolveLobbySessionState()
-        {
-            var root = ResolveActiveRoot();
-            if (root != null)
-            {
-                if (root._composedSessionState != null)
-                    return root._composedSessionState;
-
-                if (root._composedRunner != null)
-                    return LobbySessionState.FindForRunner(root._composedRunner);
-            }
-
-            return LobbySessionState.ActiveInstance ?? LobbySessionState.FindRunnerOwnedInstance();
         }
 
         private static T FindFirstInActiveScene<T>() where T : Component
