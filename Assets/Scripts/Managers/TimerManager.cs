@@ -8,6 +8,7 @@ namespace Managers
     public class TimerManager : NetworkBehaviour
     {
         [SerializeField] private float matchDurationSeconds = 120f;
+        [SerializeField] private bool enableLogs = false;
 
         [Networked] private float _remainingTime { get; set; }
         [Networked] private bool _timerRunning { get; set; } = false;
@@ -34,7 +35,7 @@ namespace Managers
             {
                 _remainingTime = 0f;
                 _timerRunning = false;
-                Debug.Log("Time ended!");
+                Log("Time ended!");
             }
         }
 
@@ -71,6 +72,14 @@ namespace Managers
 
             _timerRunning = false;
             _remainingTime = matchDurationSeconds;
+        }
+
+        private void Log(string message)
+        {
+            if (!enableLogs)
+                return;
+
+            Debug.Log($"[{GetType().Name}] {message}", this);
         }
     }
 }

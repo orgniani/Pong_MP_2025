@@ -28,6 +28,7 @@ namespace Managers
 
         [Header("Settings")]
         [SerializeField] private MatchRulesConfig matchRulesConfig;
+        [SerializeField] private bool enableLogs = false;
 
         private ScoreManager _scoreManager;
         private TimerManager _timerManager;
@@ -142,7 +143,7 @@ namespace Managers
                 var matchSessionState = runner.GetComponent<MatchSessionState>();
                 if (matchSessionState != null && matchSessionState.IsPostGameCleanup)
                 {
-                    Debug.Log($"{LogPrefix} cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
+                    Log($"cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
                     runner.Disconnect(player, null);
                     return;
                 }
@@ -190,7 +191,7 @@ namespace Managers
 
         void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner)
         {
-            Debug.Log($"{LogPrefix} connected: mode={runner.GameMode}, session='{runner.SessionInfo.Name}'");
+            Log($"connected: mode={runner.GameMode}, session='{runner.SessionInfo.Name}'");
 
             if (_networkRunner.IsClient)
                 OnConnected?.Invoke();
@@ -308,7 +309,7 @@ namespace Managers
             var playersToDisconnect = runner.ActivePlayers.ToArray();
             foreach (var player in playersToDisconnect)
             {
-                Debug.Log($"{LogPrefix} disconnecting player={player.PlayerId} during post-game cleanup");
+                Log($"disconnecting player={player.PlayerId} during post-game cleanup");
                 runner.Disconnect(player, null);
             }
         }
@@ -376,6 +377,14 @@ namespace Managers
         private int ResolveMinPlayersToStart()
         {
             return matchRulesConfig != null ? matchRulesConfig.ResolveMinPlayersToStart() : 1;
+        }
+
+        private void Log(string message)
+        {
+            if (!enableLogs)
+                return;
+
+            Debug.Log($"{LogPrefix} {message}", this);
         }
 
         private static bool IsGameSceneActive()
