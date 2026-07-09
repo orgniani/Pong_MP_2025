@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Config;
 using Fusion;
 using Fusion.Sockets;
+using UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -49,20 +50,20 @@ namespace Managers.Network
                 return;
             }
 
-            var minPlayersToStart = ResolveMinPlayersToStart();
-            if (minPlayersToStart < 1 || runner.ActivePlayers.Count() < minPlayersToStart)
+            var requiredPlayersToStart = ResolveRequiredPlayersToStart(runner);
+            if (requiredPlayersToStart < 1 || runner.ActivePlayers.Count() < requiredPlayersToStart)
             {
                 return;
             }
 
             var lobbySessionState = runner.GetComponent<LobbySessionState>();
-            if (lobbySessionState != null && !lobbySessionState.AreAllActivePlayersReady(runner, minPlayersToStart))
+            if (lobbySessionState != null && !lobbySessionState.AreAllActivePlayersReady(runner, requiredPlayersToStart))
             {
                 return;
             }
 
             var matchSessionState = runner.GetComponent<MatchSessionState>();
-            if (matchSessionState != null && !matchSessionState.CanStartMatch(runner.ActivePlayers.Count(), minPlayersToStart))
+            if (matchSessionState != null && !matchSessionState.CanStartMatch(runner.ActivePlayers.Count(), requiredPlayersToStart))
             {
                 return;
             }
@@ -78,15 +79,13 @@ namespace Managers.Network
             runner.LoadScene(SceneRef.FromIndex(gameSceneIndex));
         }
 
-        private int ResolveMinPlayersToStart()
+        private int ResolveRequiredPlayersToStart(NetworkRunner runner)
         {
-            if (_matchRulesConfig == null)
-            {
-                Debug.LogError("[DedicatedServerMatchFlow] MatchRulesConfig is missing. Cannot evaluate match start condition.");
+            if (runner == null)
                 return -1;
-            }
 
-            return _matchRulesConfig.ResolveMinPlayersToStart();
+            var requiredPlayers = UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
+            return Math.Max(1, requiredPlayers);
         }
 
         public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)

@@ -8,9 +8,13 @@ namespace Helpers
     {
         private static string _cachedLeftName = "LEFT";
         private static string _cachedRightName = "RIGHT";
+        private static bool _cachedSideNamesFrozen;
 
         public static (string left, string right) GetSideNames()
         {
+            if (_cachedSideNamesFrozen)
+                return (_cachedLeftName, _cachedRightName);
+
             var players = Object.FindObjectsByType<Player>(FindObjectsSortMode.None);
             var left = new List<string>();
             var right = new List<string>();
@@ -40,10 +44,20 @@ namespace Helpers
             );
         }
 
+        public static void FreezeCachedSideNames()
+        {
+            if (_cachedSideNamesFrozen)
+                return;
+
+            GetSideNames();
+            _cachedSideNamesFrozen = true;
+        }
+
         public static void ResetCachedSideNames()
         {
             _cachedLeftName = "LEFT";
             _cachedRightName = "RIGHT";
+            _cachedSideNamesFrozen = false;
         }
     }
 }

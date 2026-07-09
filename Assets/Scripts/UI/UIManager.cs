@@ -134,6 +134,7 @@ namespace UI
             }
 
             countdownCanvas.SetActive(false);
+            PlayerNameLookup.FreezeCachedSideNames();
         }
 
         private void CheckGameOver()

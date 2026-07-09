@@ -197,7 +197,7 @@ namespace Managers
                 var matchSessionState = runner.GetComponent<MatchSessionState>();
                 if (matchSessionState != null && matchSessionState.MatchInProgress
                     && _gameOverManager != null && !_gameOverManager.IsGameOver
-                    && runner.ActivePlayers.Count() < ResolveMinPlayersToStart())
+                    && runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner))
                 {
                     _gameOverManager.TriggerForfeit("Opponent disconnected");
                 }
@@ -290,7 +290,7 @@ namespace Managers
 
             EnsureGameplayManagers(runner);
 
-            if (runner.ActivePlayers.Count() < ResolveMinPlayersToStart()
+            if (runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner)
                 && _gameOverManager != null && !_gameOverManager.IsGameOver)
             {
                 _gameOverManager.TriggerForfeit("Opponent disconnected");
@@ -407,6 +407,15 @@ namespace Managers
         private int ResolveMinPlayersToStart()
         {
             return matchRulesConfig != null ? matchRulesConfig.ResolveMinPlayersToStart() : 1;
+        }
+
+        private static int ResolveRequiredPlayersForActiveMode(NetworkRunner runner)
+        {
+            if (runner == null)
+                return 1;
+
+            var requiredPlayers = UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
+            return Mathf.Max(1, requiredPlayers);
         }
 
         private bool TryGetSpawnPoint(UIGameModeFilter mode, int index, out Transform spawnPoint)

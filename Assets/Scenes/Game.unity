@@ -1282,11 +1282,11 @@ PrefabInstance:
     - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
       propertyPath: 'twoVsTwoSpawnPoints.Array.data[1]'
       value: 
-      objectReference: {fileID: 1073962569}
+      objectReference: {fileID: 1222702783}
     - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
       propertyPath: 'twoVsTwoSpawnPoints.Array.data[2]'
       value: 
-      objectReference: {fileID: 1222702783}
+      objectReference: {fileID: 1073962569}
     - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
       propertyPath: 'twoVsTwoSpawnPoints.Array.data[3]'
       value: 
