@@ -21,6 +21,8 @@ namespace Managers.Network
         private NetworkArray<int> TeamIds => default;
         [Networked, Capacity(MaxRosterSize)]
         private NetworkArray<int> LaneIds => default;
+        [Networked, Capacity(MaxRosterSize)]
+        private NetworkArray<int> ColorIds => default;
 
         [Networked] private int _currentPlayerCount { get; set; }
         [Networked] private int _targetPlayerCapacity { get; set; }
@@ -74,6 +76,7 @@ namespace Managers.Network
                     case nameof(ReadyStates):
                     case nameof(TeamIds):
                     case nameof(LaneIds):
+                    case nameof(ColorIds):
                     case nameof(_currentPlayerCount):
                     case nameof(_targetPlayerCapacity):
                     case nameof(_snapshotRevision):
@@ -83,7 +86,7 @@ namespace Managers.Network
             }
         }
 
-        public void SetRoster(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, IReadOnlyList<int> teamIds, IReadOnlyList<int> laneIds, int currentPlayerCount, int targetPlayerCapacity)
+        public void SetRoster(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, IReadOnlyList<int> teamIds, IReadOnlyList<int> laneIds, IReadOnlyList<int> colorIds, int currentPlayerCount, int targetPlayerCapacity)
         {
             if (!Object.HasStateAuthority)
                 return;
@@ -97,6 +100,7 @@ namespace Managers.Network
                 ReadyStates.Set(i, i < count && readyStates != null && i < readyStates.Count && readyStates[i] ? 1 : 0);
                 TeamIds.Set(i, i < count && teamIds != null && i < teamIds.Count ? Mathf.Max(0, teamIds[i]) : default);
                 LaneIds.Set(i, i < count && laneIds != null && i < laneIds.Count ? Mathf.Max(0, laneIds[i]) : default);
+                ColorIds.Set(i, i < count && colorIds != null && i < colorIds.Count ? colorIds[i] : -1);
             }
 
             _currentPlayerCount = Math.Max(0, currentPlayerCount);
@@ -121,9 +125,11 @@ namespace Managers.Network
         public LobbySessionSnapshot BuildSnapshot()
         {
             var usernames = new List<string>(MaxRosterSize);
+            var playerIds = new List<int>(MaxRosterSize);
             var readyStates = new List<bool>(MaxRosterSize);
             var teamIds = new List<int>(MaxRosterSize);
             var laneIds = new List<int>(MaxRosterSize);
+            var colorIds = new List<int>(MaxRosterSize);
             var localPlayerId = Runner != null ? Runner.LocalPlayer.PlayerId : -1;
             var isLocalPlayerReady = false;
 
@@ -133,18 +139,34 @@ namespace Managers.Network
                 if (!string.IsNullOrEmpty(value))
                 {
                     usernames.Add(value);
+                    playerIds.Add(PlayerIds[i]);
 
                     var isReady = ReadyStates[i] != 0;
                     readyStates.Add(isReady);
                     teamIds.Add(TeamIds[i]);
                     laneIds.Add(LaneIds[i]);
+                    colorIds.Add(ColorIds[i]);
 
                     if (PlayerIds[i] == localPlayerId && isReady)
                         isLocalPlayerReady = true;
                 }
             }
 
-            return new LobbySessionSnapshot(usernames.ToArray(), readyStates.ToArray(), teamIds.ToArray(), laneIds.ToArray(), isLocalPlayerReady, _currentPlayerCount, _targetPlayerCapacity);
+            return new LobbySessionSnapshot(usernames.ToArray(), playerIds.ToArray(), readyStates.ToArray(), teamIds.ToArray(), laneIds.ToArray(), colorIds.ToArray(), localPlayerId, isLocalPlayerReady, _currentPlayerCount, _targetPlayerCapacity);
+        }
+
+        public void RequestLocalPlayerColorChange(int colorId)
+        {
+            if (Runner == null || Object == null)
+                return;
+
+            if (Object.HasStateAuthority)
+            {
+                LobbySessionState.FindForRunner(Runner)?.TrySetColor(Runner, Runner.LocalPlayer, colorId);
+                return;
+            }
+
+            RPC_RequestColorChange(colorId);
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
@@ -154,6 +176,15 @@ namespace Managers.Network
                 return;
 
             LobbySessionState.FindForRunner(Runner)?.TryLockReady(Runner, info.Source);
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        private void RPC_RequestColorChange(int colorId, RpcInfo info = default)
+        {
+            if (!info.Source.IsRealPlayer)
+                return;
+
+            LobbySessionState.FindForRunner(Runner)?.TrySetColor(Runner, info.Source, colorId);
         }
     }
 }

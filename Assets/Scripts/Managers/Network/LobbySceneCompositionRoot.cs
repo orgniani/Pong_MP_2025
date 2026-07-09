@@ -1,4 +1,5 @@
 using System.Linq;
+using Config;
 using Fusion;
 using UI;
 using UnityEngine;
@@ -11,6 +12,7 @@ namespace Managers.Network
     {
         [Header("References")]
         [SerializeField] private NetworkPrefabRef lobbyRosterStatePrefab;
+        [SerializeField] private PaddleColorPalette paddleColorPalette;
         [SerializeField] private UIWaitingRoom waitingRoom;
 
         private NetworkRunner _composedRunner;
@@ -68,6 +70,8 @@ namespace Managers.Network
                 return;
             }
 
+            waitingRoom.Configure(paddleColorPalette);
+            _composedSessionState.Configure(paddleColorPalette);
             _composedSessionState?.EnterLobby(runner, lobbyRosterStatePrefab);
             waitingRoom.Bind(_composedSessionState);
         }
@@ -101,6 +105,7 @@ namespace Managers.Network
             if (_composedSessionState == null)
                 return;
 
+            waitingRoom.Configure(paddleColorPalette);
             waitingRoom.Bind(_composedSessionState);
         }
 
@@ -120,6 +125,12 @@ namespace Managers.Network
             if (waitingRoom == null)
             {
                 Debug.LogError("[LobbySceneCompositionRoot] Compose failed because UIWaitingRoom is not assigned. Wire the waiting room through the Lobby scene composition root.", this);
+                return false;
+            }
+
+            if (paddleColorPalette == null)
+            {
+                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because PaddleColorPalette is not assigned. The Lobby scene composition root is the single scene owner and must inject the palette into UIWaitingRoom and LobbySessionState.", this);
                 return false;
             }
 

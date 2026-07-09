@@ -43,6 +43,8 @@ namespace Managers.Network
                     var spawnedPlayer = obj.GetComponent<Players.Player>();
                     spawnedPlayer.SpawnPointIndex = spawnIndex;
                     spawnedPlayer.SetTeamLane(teamId, laneId);
+                    if (LobbySessionState.FindForRunner(r)?.TryGetColorId(player, out var colorId) == true)
+                        spawnedPlayer.SetColorId(colorId);
                 }
             );
 

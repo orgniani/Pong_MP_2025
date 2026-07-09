@@ -89,25 +89,33 @@ namespace Managers.Network
     public readonly struct LobbySessionSnapshot
     {
         private static readonly string[] EmptyUsernames = Array.Empty<string>();
+        private static readonly int[] EmptyPlayerIds = Array.Empty<int>();
         private static readonly bool[] EmptyReadyStates = Array.Empty<bool>();
         private static readonly int[] EmptyTeamIds = Array.Empty<int>();
         private static readonly int[] EmptyLaneIds = Array.Empty<int>();
+        private static readonly int[] EmptyColorIds = Array.Empty<int>();
 
-        public LobbySessionSnapshot(string[] waitingUsernames, bool[] readyStates, int[] teamIds, int[] laneIds, bool isLocalPlayerReady, int currentPlayerCount, int targetPlayerCapacity)
+        public LobbySessionSnapshot(string[] waitingUsernames, int[] playerIds, bool[] readyStates, int[] teamIds, int[] laneIds, int[] colorIds, int localPlayerId, bool isLocalPlayerReady, int currentPlayerCount, int targetPlayerCapacity)
         {
             WaitingUsernames = waitingUsernames ?? EmptyUsernames;
+            PlayerIds = playerIds ?? EmptyPlayerIds;
             ReadyStates = readyStates ?? EmptyReadyStates;
             TeamIds = teamIds ?? EmptyTeamIds;
             LaneIds = laneIds ?? EmptyLaneIds;
+            ColorIds = colorIds ?? EmptyColorIds;
+            LocalPlayerId = localPlayerId;
             IsLocalPlayerReady = isLocalPlayerReady;
             CurrentPlayerCount = Math.Max(0, currentPlayerCount);
             TargetPlayerCapacity = Math.Max(0, targetPlayerCapacity);
         }
 
         public string[] WaitingUsernames { get; }
+        public int[] PlayerIds { get; }
         public bool[] ReadyStates { get; }
         public int[] TeamIds { get; }
         public int[] LaneIds { get; }
+        public int[] ColorIds { get; }
+        public int LocalPlayerId { get; }
         public bool IsLocalPlayerReady { get; }
         public int CurrentPlayerCount { get; }
         public int TargetPlayerCapacity { get; }
