@@ -11,7 +11,9 @@ namespace Boot
     public class DedicatedServerBootstrap : MonoBehaviour
     {
         [SerializeField] private MatchRulesConfig matchRulesConfig;
+#if UNITY_EDITOR
         [SerializeField] private bool allowNonHeadlessStartInEditor = true;
+#endif
         [SerializeField] private float restartDelaySec = 2f;
 
         private const string SessionPrefix = "PongServer";

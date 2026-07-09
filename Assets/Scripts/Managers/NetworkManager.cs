@@ -10,6 +10,7 @@ using System.Linq;
 using Balls;
 using Helpers;
 using UnityEngine.SceneManagement;
+using UI;
 
 namespace Managers
 {
@@ -18,7 +19,8 @@ namespace Managers
         private const string LogPrefix = "[NetLifecycle]";
 
         [Header("References")]
-        [SerializeField] private Transform[] spawnPositions;
+        [SerializeField] private Transform[] oneVsOneSpawnPoints;
+        [SerializeField] private Transform[] twoVsTwoSpawnPoints;
 
         [Header("Prefabs")]
         [SerializeField] private NetworkPrefabRef playerPrefab;
@@ -91,6 +93,7 @@ namespace Managers
             _networkRunner?.RemoveCallbacks(this);
             _networkRunner = runner;
             _networkRunner.AddCallbacks(this);
+            RefreshLaneVisibilityForCurrentMode(_networkRunner);
             return true;
         }
 
@@ -102,14 +105,39 @@ namespace Managers
 
         public bool TryGetSpawnPoint(int index, out Transform spawnPoint)
         {
+            return TryGetSpawnPoint(ResolveCurrentMode(), index, out spawnPoint);
+        }
+
+        public bool TryResolveSpawnAssignment(NetworkRunner runner, PlayerRef player, out int spawnPointIndex, out int teamId, out int laneId, out Transform spawnPoint)
+        {
+            spawnPointIndex = -1;
+            teamId = 0;
+            laneId = 0;
             spawnPoint = null;
 
-            if (spawnPositions == null || spawnPositions.Length == 0)
+            if (runner == null)
                 return false;
 
-            int normalizedIndex = ((index % spawnPositions.Length) + spawnPositions.Length) % spawnPositions.Length;
-            spawnPoint = spawnPositions[normalizedIndex];
+            _playerSpawner ??= new NetworkPlayerSpawner(playerPrefab);
 
+            var playerSlotIndex = _playerSpawner.ResolvePlayerSlotIndex(runner, player);
+            if (playerSlotIndex < 0)
+                return false;
+
+            var mode = TeamLaneAssignmentUtility.ResolveMode(UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers));
+            var assignment = TeamLaneAssignmentUtility.ResolveAssignment(mode, playerSlotIndex);
+            var layoutIndex = TeamLaneAssignmentUtility.ResolveSpawnLayoutIndex(mode, assignment.TeamId, assignment.LaneId);
+            if (layoutIndex < 0)
+                return false;
+
+            var configuredSpawnPoints = ResolveSpawnPointLayout(mode);
+            if (configuredSpawnPoints == null || layoutIndex >= configuredSpawnPoints.Length)
+                return false;
+
+            spawnPointIndex = layoutIndex;
+            teamId = assignment.TeamId;
+            laneId = assignment.LaneId;
+            spawnPoint = configuredSpawnPoints[layoutIndex];
             return spawnPoint != null;
         }
 
@@ -148,7 +176,7 @@ namespace Managers
                     return;
                 }
 
-                _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab);
+                _playerSpawner ??= new NetworkPlayerSpawner(playerPrefab);
                 if (IsGameSceneActive() && matchSessionState?.MatchInProgress == true)
                 {
                     SpawnMissingPlayer(runner, player);
@@ -227,6 +255,8 @@ namespace Managers
         void INetworkRunnerCallbacks.OnHostMigration (NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
         void INetworkRunnerCallbacks.OnSceneLoadDone(NetworkRunner runner)
         {
+            RefreshLaneVisibilityForCurrentMode(runner);
+
             if (!runner.IsServer) return;
 
             var matchSessionState = runner.GetComponent<MatchSessionState>();
@@ -251,7 +281,7 @@ namespace Managers
             if (matchSessionState?.MatchInProgress != true)
                 return;
 
-            _playerSpawner ??= new NetworkPlayerSpawner(spawnPositions, playerPrefab);
+            _playerSpawner ??= new NetworkPlayerSpawner(playerPrefab);
 
             foreach (var player in runner.ActivePlayers)
             {
@@ -377,6 +407,92 @@ namespace Managers
         private int ResolveMinPlayersToStart()
         {
             return matchRulesConfig != null ? matchRulesConfig.ResolveMinPlayersToStart() : 1;
+        }
+
+        private bool TryGetSpawnPoint(UIGameModeFilter mode, int index, out Transform spawnPoint)
+        {
+            spawnPoint = null;
+
+            var spawnPoints = ResolveSpawnPointLayout(mode);
+            if (spawnPoints == null || spawnPoints.Length == 0)
+                return false;
+
+            int normalizedIndex = ((index % spawnPoints.Length) + spawnPoints.Length) % spawnPoints.Length;
+            spawnPoint = spawnPoints[normalizedIndex];
+            return spawnPoint != null;
+        }
+
+        private Transform[] ResolveSpawnPointLayout(UIGameModeFilter mode)
+        {
+            if (mode == UIGameModeFilter.TwoVsTwo)
+                return twoVsTwoSpawnPoints != null && twoVsTwoSpawnPoints.Length >= UIGameModeFilterExtensions.TwoVsTwoMaxPlayers
+                    ? twoVsTwoSpawnPoints
+                    : null;
+
+            return oneVsOneSpawnPoints != null && oneVsOneSpawnPoints.Length >= 2
+                ? oneVsOneSpawnPoints
+                : null;
+        }
+
+        private void RefreshLaneVisibilityForCurrentMode(NetworkRunner runner)
+        {
+            if (runner == null || !IsGameSceneActive())
+                return;
+
+            var mode = TeamLaneAssignmentUtility.ResolveMode(UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers));
+            ApplyLaneVisibility(mode);
+        }
+
+        private void ApplyLaneVisibility(UIGameModeFilter mode)
+        {
+            var activeLayout = ResolveSpawnPointLayout(mode);
+            if (activeLayout == null || activeLayout.Length == 0)
+                return;
+
+            var activeSpawnPoints = new HashSet<Transform>();
+            foreach (var spawnPoint in activeLayout)
+            {
+                if (spawnPoint != null)
+                    activeSpawnPoints.Add(spawnPoint);
+            }
+
+            var processedRenderers = new HashSet<SpriteRenderer>();
+            foreach (var spawnPoint in EnumerateConfiguredSpawnPoints())
+            {
+                if (spawnPoint == null)
+                    continue;
+
+                var laneRenderer = spawnPoint.GetComponent<SpriteRenderer>();
+                if (laneRenderer == null || !processedRenderers.Add(laneRenderer))
+                    continue;
+
+                laneRenderer.enabled = activeSpawnPoints.Contains(spawnPoint);
+            }
+        }
+
+        private IEnumerable<Transform> EnumerateConfiguredSpawnPoints()
+        {
+            if (oneVsOneSpawnPoints != null)
+            {
+                foreach (var spawnPoint in oneVsOneSpawnPoints)
+                    yield return spawnPoint;
+            }
+
+            if (twoVsTwoSpawnPoints != null)
+            {
+                foreach (var spawnPoint in twoVsTwoSpawnPoints)
+                    yield return spawnPoint;
+            }
+        }
+
+        private UIGameModeFilter ResolveCurrentMode()
+        {
+            if (_networkRunner != null)
+                return TeamLaneAssignmentUtility.ResolveMode(UIGameModeFilterExtensions.ToGamePlayerCount(_networkRunner.SessionInfo.MaxPlayers));
+
+            return twoVsTwoSpawnPoints != null && twoVsTwoSpawnPoints.Length >= UIGameModeFilterExtensions.TwoVsTwoMaxPlayers
+                ? UIGameModeFilter.TwoVsTwo
+                : UIGameModeFilter.OneVsOne;
         }
 
         private void Log(string message)

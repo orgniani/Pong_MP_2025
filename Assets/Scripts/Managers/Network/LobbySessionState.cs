@@ -12,7 +12,7 @@ namespace Managers.Network
     {
         private const string UsernameTokenPrefix = "lobby-username:";
         private const string FallbackUsername = "Player";
-        private static readonly LobbySessionSnapshot EmptySnapshot = new(Array.Empty<string>(), Array.Empty<bool>(), false, 0, 0);
+        private static readonly LobbySessionSnapshot EmptySnapshot = new(Array.Empty<string>(), Array.Empty<bool>(), Array.Empty<int>(), Array.Empty<int>(), false, 0, 0);
         private static LobbySessionState _activeInstance;
         private static int _activationSequence;
         private NetworkRunner _runner;
@@ -149,7 +149,7 @@ namespace Managers.Network
             SnapshotChanged?.Invoke(EmptySnapshot);
 
             if (_runner != null && _runner.IsServer)
-                rosterState?.SetRoster(Array.Empty<string>(), Array.Empty<int>(), Array.Empty<bool>(), 0, 0);
+                rosterState?.SetRoster(Array.Empty<string>(), Array.Empty<int>(), Array.Empty<bool>(), Array.Empty<int>(), Array.Empty<int>(), 0, 0);
         }
 
         public void RequestLocalPlayerReadyLock()
@@ -304,8 +304,19 @@ namespace Managers.Network
             var orderedReadyStates = orderedEntries
                 .Select(entry => _readyPlayers.TryGetValue(entry.Key, out var isReady) && isReady)
                 .ToArray();
+            var targetPlayerCapacity = ResolveTargetPlayerCapacity(runner);
+            var mode = TeamLaneAssignmentUtility.ResolveMode(targetPlayerCapacity);
+            var orderedAssignments = orderedEntries
+                .Select((entry, index) => TeamLaneAssignmentUtility.ResolveAssignment(mode, index))
+                .ToArray();
+            var orderedTeamIds = orderedAssignments
+                .Select(assignment => assignment.TeamId)
+                .ToArray();
+            var orderedLaneIds = orderedAssignments
+                .Select(assignment => assignment.LaneId)
+                .ToArray();
 
-            _rosterState.SetRoster(orderedUsernames, orderedPlayerIds, orderedReadyStates, runner.ActivePlayers.Count(), ResolveTargetPlayerCapacity(runner));
+            _rosterState.SetRoster(orderedUsernames, orderedPlayerIds, orderedReadyStates, orderedTeamIds, orderedLaneIds, runner.ActivePlayers.Count(), targetPlayerCapacity);
         }
 
         private void HandleRosterSnapshotChanged(LobbySessionSnapshot snapshot)

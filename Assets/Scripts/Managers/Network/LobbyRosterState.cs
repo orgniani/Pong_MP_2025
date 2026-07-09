@@ -17,6 +17,10 @@ namespace Managers.Network
         private NetworkArray<int> PlayerIds => default;
         [Networked, Capacity(MaxRosterSize)]
         private NetworkArray<int> ReadyStates => default;
+        [Networked, Capacity(MaxRosterSize)]
+        private NetworkArray<int> TeamIds => default;
+        [Networked, Capacity(MaxRosterSize)]
+        private NetworkArray<int> LaneIds => default;
 
         [Networked] private int _currentPlayerCount { get; set; }
         [Networked] private int _targetPlayerCapacity { get; set; }
@@ -68,6 +72,8 @@ namespace Managers.Network
                     case nameof(Usernames):
                     case nameof(PlayerIds):
                     case nameof(ReadyStates):
+                    case nameof(TeamIds):
+                    case nameof(LaneIds):
                     case nameof(_currentPlayerCount):
                     case nameof(_targetPlayerCapacity):
                     case nameof(_snapshotRevision):
@@ -77,7 +83,7 @@ namespace Managers.Network
             }
         }
 
-        public void SetRoster(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, int currentPlayerCount, int targetPlayerCapacity)
+        public void SetRoster(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, IReadOnlyList<int> teamIds, IReadOnlyList<int> laneIds, int currentPlayerCount, int targetPlayerCapacity)
         {
             if (!Object.HasStateAuthority)
                 return;
@@ -89,6 +95,8 @@ namespace Managers.Network
                 Usernames.Set(i, i < count ? usernames[i] : default);
                 PlayerIds.Set(i, i < count && playerIds != null && i < playerIds.Count ? Mathf.Max(0, playerIds[i]) : default);
                 ReadyStates.Set(i, i < count && readyStates != null && i < readyStates.Count && readyStates[i] ? 1 : 0);
+                TeamIds.Set(i, i < count && teamIds != null && i < teamIds.Count ? Mathf.Max(0, teamIds[i]) : default);
+                LaneIds.Set(i, i < count && laneIds != null && i < laneIds.Count ? Mathf.Max(0, laneIds[i]) : default);
             }
 
             _currentPlayerCount = Math.Max(0, currentPlayerCount);
@@ -114,6 +122,8 @@ namespace Managers.Network
         {
             var usernames = new List<string>(MaxRosterSize);
             var readyStates = new List<bool>(MaxRosterSize);
+            var teamIds = new List<int>(MaxRosterSize);
+            var laneIds = new List<int>(MaxRosterSize);
             var localPlayerId = Runner != null ? Runner.LocalPlayer.PlayerId : -1;
             var isLocalPlayerReady = false;
 
@@ -126,13 +136,15 @@ namespace Managers.Network
 
                     var isReady = ReadyStates[i] != 0;
                     readyStates.Add(isReady);
+                    teamIds.Add(TeamIds[i]);
+                    laneIds.Add(LaneIds[i]);
 
                     if (PlayerIds[i] == localPlayerId && isReady)
                         isLocalPlayerReady = true;
                 }
             }
 
-            return new LobbySessionSnapshot(usernames.ToArray(), readyStates.ToArray(), isLocalPlayerReady, _currentPlayerCount, _targetPlayerCapacity);
+            return new LobbySessionSnapshot(usernames.ToArray(), readyStates.ToArray(), teamIds.ToArray(), laneIds.ToArray(), isLocalPlayerReady, _currentPlayerCount, _targetPlayerCapacity);
         }
 
         [Rpc(RpcSources.All, RpcTargets.StateAuthority)]

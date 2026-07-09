@@ -1,12 +1,13 @@
 using Fusion;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Managers.Network
 {
     public class NetworkPlayerSpawner
     {
-        private readonly Transform[] _spawnPoints;
         private readonly NetworkPrefabRef _playerPrefab;
 
         private readonly Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new();
@@ -15,16 +16,22 @@ namespace Managers.Network
 
         public bool IsSpawned(PlayerRef player) => _spawnedPlayers.ContainsKey(player);
 
-        public NetworkPlayerSpawner(Transform[] spawnPoints, NetworkPrefabRef playerPrefab)
+        public NetworkPlayerSpawner(NetworkPrefabRef playerPrefab)
         {
-            _spawnPoints = spawnPoints;
             _playerPrefab = playerPrefab;
         }
 
         public void SpawnPlayer(NetworkRunner runner, PlayerRef player)
         {
-            int spawnIndex = _spawnedPlayers.Count % _spawnPoints.Length;
-            Transform spawnPoint = _spawnPoints[spawnIndex];
+            if (runner == null)
+                throw new ArgumentNullException(nameof(runner));
+
+            var manager = Managers.NetworkManager.Instance;
+            if (manager == null || !manager.TryResolveSpawnAssignment(runner, player, out var spawnIndex, out var teamId, out var laneId, out var spawnPoint))
+            {
+                Debug.LogError($"[NetworkPlayerSpawner] Failed to resolve spawn assignment for player {player.PlayerId}.");
+                return;
+            }
 
             NetworkObject playerObj = runner.Spawn(
                 _playerPrefab,
@@ -33,7 +40,9 @@ namespace Managers.Network
                 player,
                 onBeforeSpawned: (r, obj) =>
                 {
-                    obj.GetComponent<Players.Player>().SpawnPointIndex = spawnIndex;
+                    var spawnedPlayer = obj.GetComponent<Players.Player>();
+                    spawnedPlayer.SpawnPointIndex = spawnIndex;
+                    spawnedPlayer.SetTeamLane(teamId, laneId);
                 }
             );
 
@@ -62,6 +71,14 @@ namespace Managers.Network
             }
 
             _spawnedPlayers.Clear();
+        }
+
+        public int ResolvePlayerSlotIndex(NetworkRunner runner, PlayerRef player)
+        {
+            return runner.ActivePlayers
+                .OrderBy(activePlayer => activePlayer.PlayerId)
+                .ToList()
+                .FindIndex(activePlayer => activePlayer == player);
         }
     }
 }

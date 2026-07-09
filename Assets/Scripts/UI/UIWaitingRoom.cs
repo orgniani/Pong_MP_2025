@@ -111,7 +111,7 @@ namespace UI
 
         private static LobbySessionSnapshot CreateEmptySnapshot()
         {
-            return new LobbySessionSnapshot(Array.Empty<string>(), Array.Empty<bool>(), false, 0, 0);
+            return new LobbySessionSnapshot(Array.Empty<string>(), Array.Empty<bool>(), Array.Empty<int>(), Array.Empty<int>(), false, 0, 0);
         }
 
         private static string BuildRosterText(LobbySessionSnapshot snapshot)
@@ -122,7 +122,11 @@ namespace UI
             {
                 var isReady = snapshot.ReadyStates != null && i < snapshot.ReadyStates.Length && snapshot.ReadyStates[i];
                 var username = (snapshot.WaitingUsernames[i] ?? string.Empty).ToUpperInvariant();
-                lines[i] = isReady ? $"{username} (READY)" : username;
+                var teamId = snapshot.TeamIds != null && i < snapshot.TeamIds.Length ? snapshot.TeamIds[i] : 0;
+                var laneId = snapshot.LaneIds != null && i < snapshot.LaneIds.Length ? snapshot.LaneIds[i] : 0;
+                var assignmentLabel = TeamLaneAssignmentUtility.FormatAssignmentLabel(teamId, laneId).ToUpperInvariant();
+                var readySuffix = isReady ? " (READY)" : string.Empty;
+                lines[i] = $"{username} - {assignmentLabel}{readySuffix}";
             }
 
             return string.Join(Environment.NewLine, lines);

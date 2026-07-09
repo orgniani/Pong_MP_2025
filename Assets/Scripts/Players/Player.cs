@@ -14,6 +14,8 @@ namespace Players
         [SerializeField] private AnimationCurve sizeAnimationCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
         [Networked] private int _spawnPointIndex { get; set; }
+        [Networked] private int _teamId { get; set; }
+        [Networked] private int _laneId { get; set; }
         [Networked] private NetworkString<_16> _username { get; set; }
         [Networked] private float _sizeMultiplier { get; set; } = 1f;
         [Networked] private float _sizeEffectTimer { get; set; } = 0f;
@@ -26,6 +28,14 @@ namespace Players
 
         public string Username => _username.ToString();
         public float SizeMultiplier => _sizeMultiplier;
+        public int TeamId => _teamId;
+        public int LaneId => _laneId;
+
+        public void SetTeamLane(int teamId, int laneId)
+        {
+            _teamId = teamId;
+            _laneId = laneId;
+        }
 
         public static event Action OnAnyUsernameChanged;
 
