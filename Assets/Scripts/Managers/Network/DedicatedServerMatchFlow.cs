@@ -12,6 +12,7 @@ namespace Managers.Network
 {
     public sealed class DedicatedServerMatchFlow : INetworkRunnerCallbacks
     {
+        private static readonly Dictionary<NetworkRunner, DedicatedServerMatchFlow> ActiveFlows = new();
         private readonly MatchRulesConfig _matchRulesConfig;
         private readonly TaskCompletionSource<ShutdownReason> _shutdownTcs;
         private readonly LobbyAutoStartCoordinator _lobbyAutoStartCoordinator;
@@ -28,7 +29,17 @@ namespace Managers.Network
 
         public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
         {
+            RegisterRunner(runner);
             TryStartMatch(runner);
+        }
+
+        public static void RequestMatchStartEvaluation(NetworkRunner runner)
+        {
+            if (runner == null)
+                return;
+
+            if (ActiveFlows.TryGetValue(runner, out var flow))
+                flow.TryStartMatch(runner);
         }
 
         private void TryStartMatch(NetworkRunner runner)
@@ -40,6 +51,12 @@ namespace Managers.Network
 
             var minPlayersToStart = ResolveMinPlayersToStart();
             if (minPlayersToStart < 1 || runner.ActivePlayers.Count() < minPlayersToStart)
+            {
+                return;
+            }
+
+            var lobbySessionState = runner.GetComponent<LobbySessionState>();
+            if (lobbySessionState != null && !lobbySessionState.AreAllActivePlayersReady(runner, minPlayersToStart))
             {
                 return;
             }
@@ -72,9 +89,13 @@ namespace Managers.Network
             return _matchRulesConfig.ResolveMinPlayersToStart();
         }
 
-        public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
+        public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+        {
+            RegisterRunner(runner);
+        }
         public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
         {
+            ActiveFlows.Remove(runner);
             _lobbyAutoStartCoordinator.Cancel(runner);
             _shutdownTcs?.TrySetResult(shutdownReason);
         }
@@ -90,6 +111,7 @@ namespace Managers.Network
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
         public void OnSceneLoadDone(NetworkRunner runner)
         {
+            RegisterRunner(runner);
             if (!runner.IsServer)
                 return;
 
@@ -115,8 +137,16 @@ namespace Managers.Network
 
         public void OnSceneLoadStart(NetworkRunner runner)
         {
+            RegisterRunner(runner);
             _lobbyAutoStartCoordinator.Cancel(runner);
         }
+
+        private void RegisterRunner(NetworkRunner runner)
+        {
+            if (runner != null)
+                ActiveFlows[runner] = this;
+        }
+
         public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
         public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
         public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }

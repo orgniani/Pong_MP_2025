@@ -15,9 +15,13 @@ namespace UI
         [SerializeField] private TMP_Text rosterText;
         [SerializeField] private TMP_Text waitingStatusText;
         [SerializeField] private Button leaveButton;
+        [SerializeField] private Button readyButton;
+        [SerializeField] private TMP_Text readyButtonText;
 
         [Header("Content")]
         [SerializeField] private string waitingStatusPrefix = "Waiting for more players";
+        [SerializeField] private string readyButtonLabel = "Ready";
+        [SerializeField] private string readyLockedButtonLabel = "Ready Locked";
 
         private LobbySessionState _lobbySessionState;
 
@@ -26,6 +30,9 @@ namespace UI
             if (leaveButton != null)
                 leaveButton.onClick.AddListener(HandleLeaveClicked);
 
+            if (readyButton != null)
+                readyButton.onClick.AddListener(HandleReadyClicked);
+
             Enabled?.Invoke();
         }
 
@@ -33,6 +40,9 @@ namespace UI
         {
             if (leaveButton != null)
                 leaveButton.onClick.RemoveListener(HandleLeaveClicked);
+
+            if (readyButton != null)
+                readyButton.onClick.RemoveListener(HandleReadyClicked);
 
             Unbind();
         }
@@ -71,7 +81,7 @@ namespace UI
         {
             if (rosterText != null)
                 rosterText.text = snapshot.WaitingUsernames != null && snapshot.WaitingUsernames.Length > 0
-                    ? string.Join(Environment.NewLine, snapshot.WaitingUsernames)
+                    ? BuildRosterText(snapshot)
                     : string.Empty;
 
             if (waitingStatusText != null)
@@ -81,6 +91,12 @@ namespace UI
                     ? counter
                     : $"{waitingStatusPrefix.Trim()} ({counter})";
             }
+
+            if (readyButton != null)
+                readyButton.interactable = !snapshot.IsLocalPlayerReady;
+
+            if (readyButtonText != null)
+                readyButtonText.text = snapshot.IsLocalPlayerReady ? readyLockedButtonLabel : readyButtonLabel;
         }
 
         private void HandleLeaveClicked()
@@ -88,9 +104,28 @@ namespace UI
             SessionExitToMainMenu.Execute("[UIWaitingRoom]");
         }
 
+        private void HandleReadyClicked()
+        {
+            _lobbySessionState?.RequestLocalPlayerReadyLock();
+        }
+
         private static LobbySessionSnapshot CreateEmptySnapshot()
         {
-            return new LobbySessionSnapshot(Array.Empty<string>(), 0, 0);
+            return new LobbySessionSnapshot(Array.Empty<string>(), Array.Empty<bool>(), false, 0, 0);
+        }
+
+        private static string BuildRosterText(LobbySessionSnapshot snapshot)
+        {
+            var lines = new string[snapshot.WaitingUsernames.Length];
+
+            for (var i = 0; i < snapshot.WaitingUsernames.Length; i++)
+            {
+                var isReady = snapshot.ReadyStates != null && i < snapshot.ReadyStates.Length && snapshot.ReadyStates[i];
+                var username = (snapshot.WaitingUsernames[i] ?? string.Empty).ToUpperInvariant();
+                lines[i] = isReady ? $"{username} (READY)" : username;
+            }
+
+            return string.Join(Environment.NewLine, lines);
         }
     }
 }

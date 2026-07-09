@@ -12,7 +12,7 @@ namespace Managers.Network
     {
         private const string UsernameTokenPrefix = "lobby-username:";
         private const string FallbackUsername = "Player";
-        private static readonly LobbySessionSnapshot EmptySnapshot = new(Array.Empty<string>(), 0, 0);
+        private static readonly LobbySessionSnapshot EmptySnapshot = new(Array.Empty<string>(), Array.Empty<bool>(), false, 0, 0);
         private static LobbySessionState _activeInstance;
         private static int _activationSequence;
         private NetworkRunner _runner;
@@ -20,6 +20,7 @@ namespace Managers.Network
         private LobbyRosterState _rosterState;
 
         private readonly Dictionary<PlayerRef, string> _waitingUsernames = new();
+        private readonly Dictionary<PlayerRef, bool> _readyPlayers = new();
 
         public event Action<LobbySessionSnapshot> SnapshotChanged;
 
@@ -90,6 +91,7 @@ namespace Managers.Network
                 return;
 
             _waitingUsernames[player] = ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
+            _readyPlayers[player] = false;
             PublishRoster(runner);
         }
 
@@ -99,7 +101,9 @@ namespace Managers.Network
                 return;
 
             _waitingUsernames.Remove(player);
+            _readyPlayers.Remove(player);
             PublishRoster(runner);
+            DedicatedServerMatchFlow.RequestMatchStartEvaluation(runner);
         }
 
         public void RefreshFromRunner(NetworkRunner runner)
@@ -119,8 +123,13 @@ namespace Managers.Network
             _runner = runner;
             MarkAsActive();
 
-            if (_runner.IsServer)
-                EnsureRosterSpawned(lobbyRosterStatePrefab);
+            var spawnedFreshLobbyRoster = _runner.IsServer && EnsureRosterSpawned(lobbyRosterStatePrefab);
+
+            if (spawnedFreshLobbyRoster)
+            {
+                _waitingUsernames.Clear();
+                _readyPlayers.Clear();
+            }
 
             RefreshRosterBinding(LobbyRosterState.ActiveInstance);
 
@@ -133,13 +142,45 @@ namespace Managers.Network
         public void ResetState()
         {
             _waitingUsernames.Clear();
+            _readyPlayers.Clear();
             var rosterState = _rosterState;
             UnbindRosterState();
 
             SnapshotChanged?.Invoke(EmptySnapshot);
 
             if (_runner != null && _runner.IsServer)
-                rosterState?.SetRoster(Array.Empty<string>(), 0, 0);
+                rosterState?.SetRoster(Array.Empty<string>(), Array.Empty<int>(), Array.Empty<bool>(), 0, 0);
+        }
+
+        public void RequestLocalPlayerReadyLock()
+        {
+            _rosterState?.RequestLocalPlayerReadyLock();
+        }
+
+        public bool TryLockReady(NetworkRunner runner, PlayerRef player)
+        {
+            if (runner == null || !runner.IsServer || !player.IsRealPlayer || !_waitingUsernames.ContainsKey(player))
+                return false;
+
+            if (_readyPlayers.TryGetValue(player, out var alreadyReady) && alreadyReady)
+                return false;
+
+            _readyPlayers[player] = true;
+            PublishRoster(runner);
+            DedicatedServerMatchFlow.RequestMatchStartEvaluation(runner);
+            return true;
+        }
+
+        public bool AreAllActivePlayersReady(NetworkRunner runner, int minPlayersToStart)
+        {
+            if (runner == null || !runner.IsServer)
+                return false;
+
+            var activePlayers = runner.ActivePlayers.ToArray();
+            if (activePlayers.Length < Math.Max(1, minPlayersToStart))
+                return false;
+
+            return activePlayers.All(player => _readyPlayers.TryGetValue(player, out var isReady) && isReady);
         }
 
         private void MarkAsActive()
@@ -171,18 +212,19 @@ namespace Managers.Network
             return resolved;
         }
 
-        private void EnsureRosterSpawned(NetworkPrefabRef lobbyRosterStatePrefab)
+        private bool EnsureRosterSpawned(NetworkPrefabRef lobbyRosterStatePrefab)
         {
             if (_runner == null || !_runner.IsServer || LobbyRosterState.FindForRunner(_runner) != null)
-                return;
+                return false;
 
             if (!lobbyRosterStatePrefab.IsValid)
             {
                 Debug.LogError("[LobbySessionState] Lobby roster spawn failed because the lobby roster prefab is missing or invalid. Assign it directly on LobbySceneCompositionRoot in the Lobby scene.", this);
-                return;
+                return false;
             }
 
             _runner.Spawn(lobbyRosterStatePrefab);
+            return true;
         }
 
         private void RefreshRosterBinding(LobbyRosterState _)
@@ -230,9 +272,18 @@ namespace Managers.Network
 
         private void SynchronizeServerRoster(NetworkRunner runner)
         {
+            var synchronizedReadyPlayers = new Dictionary<PlayerRef, bool>();
+
             _waitingUsernames.Clear();
             foreach (var player in runner.ActivePlayers.OrderBy(activePlayer => activePlayer.PlayerId))
+            {
                 _waitingUsernames[player] = ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
+                synchronizedReadyPlayers[player] = _readyPlayers.TryGetValue(player, out var isReady) && isReady;
+            }
+
+            _readyPlayers.Clear();
+            foreach (var entry in synchronizedReadyPlayers)
+                _readyPlayers[entry.Key] = entry.Value;
         }
 
         private void PublishRoster(NetworkRunner runner)
@@ -240,12 +291,21 @@ namespace Managers.Network
             if (_rosterState == null)
                 return;
 
-            var orderedUsernames = _waitingUsernames
+            var orderedEntries = _waitingUsernames
                 .OrderBy(entry => entry.Key.PlayerId)
-                .Select(entry => NormalizeUsername(entry.Value))
                 .ToArray();
 
-            _rosterState.SetRoster(orderedUsernames, runner.ActivePlayers.Count(), ResolveTargetPlayerCapacity(runner));
+            var orderedUsernames = orderedEntries
+                .Select(entry => NormalizeUsername(entry.Value))
+                .ToArray();
+            var orderedPlayerIds = orderedEntries
+                .Select(entry => entry.Key.PlayerId)
+                .ToArray();
+            var orderedReadyStates = orderedEntries
+                .Select(entry => _readyPlayers.TryGetValue(entry.Key, out var isReady) && isReady)
+                .ToArray();
+
+            _rosterState.SetRoster(orderedUsernames, orderedPlayerIds, orderedReadyStates, runner.ActivePlayers.Count(), ResolveTargetPlayerCapacity(runner));
         }
 
         private void HandleRosterSnapshotChanged(LobbySessionSnapshot snapshot)

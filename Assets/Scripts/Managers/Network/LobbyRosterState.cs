@@ -13,9 +13,14 @@ namespace Managers.Network
 
         [Networked, Capacity(MaxRosterSize)]
         private NetworkArray<NetworkString<_16>> Usernames => default;
+        [Networked, Capacity(MaxRosterSize)]
+        private NetworkArray<int> PlayerIds => default;
+        [Networked, Capacity(MaxRosterSize)]
+        private NetworkArray<int> ReadyStates => default;
 
         [Networked] private int _currentPlayerCount { get; set; }
         [Networked] private int _targetPlayerCapacity { get; set; }
+        [Networked] private int _snapshotRevision { get; set; }
 
         private static LobbyRosterState _activeInstance;
         private ChangeDetector _changes;
@@ -61,15 +66,18 @@ namespace Managers.Network
                 switch (change)
                 {
                     case nameof(Usernames):
+                    case nameof(PlayerIds):
+                    case nameof(ReadyStates):
                     case nameof(_currentPlayerCount):
                     case nameof(_targetPlayerCapacity):
+                    case nameof(_snapshotRevision):
                         SnapshotChanged?.Invoke(BuildSnapshot());
                         break;
                 }
             }
         }
 
-        public void SetRoster(IReadOnlyList<string> usernames, int currentPlayerCount, int targetPlayerCapacity)
+        public void SetRoster(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, int currentPlayerCount, int targetPlayerCapacity)
         {
             if (!Object.HasStateAuthority)
                 return;
@@ -77,23 +85,63 @@ namespace Managers.Network
             var count = usernames != null ? Math.Min(usernames.Count, MaxRosterSize) : 0;
 
             for (var i = 0; i < MaxRosterSize; i++)
+            {
                 Usernames.Set(i, i < count ? usernames[i] : default);
+                PlayerIds.Set(i, i < count && playerIds != null && i < playerIds.Count ? Mathf.Max(0, playerIds[i]) : default);
+                ReadyStates.Set(i, i < count && readyStates != null && i < readyStates.Count && readyStates[i] ? 1 : 0);
+            }
 
             _currentPlayerCount = Math.Max(0, currentPlayerCount);
             _targetPlayerCapacity = Math.Max(0, targetPlayerCapacity);
+            _snapshotRevision++;
+        }
+
+        public void RequestLocalPlayerReadyLock()
+        {
+            if (Runner == null || Object == null)
+                return;
+
+            if (Object.HasStateAuthority)
+            {
+                LobbySessionState.FindForRunner(Runner)?.TryLockReady(Runner, Runner.LocalPlayer);
+                return;
+            }
+
+            RPC_RequestReadyLock();
         }
 
         public LobbySessionSnapshot BuildSnapshot()
         {
             var usernames = new List<string>(MaxRosterSize);
+            var readyStates = new List<bool>(MaxRosterSize);
+            var localPlayerId = Runner != null ? Runner.LocalPlayer.PlayerId : -1;
+            var isLocalPlayerReady = false;
+
             for (var i = 0; i < MaxRosterSize; i++)
             {
                 var value = Usernames[i].ToString();
                 if (!string.IsNullOrEmpty(value))
+                {
                     usernames.Add(value);
+
+                    var isReady = ReadyStates[i] != 0;
+                    readyStates.Add(isReady);
+
+                    if (PlayerIds[i] == localPlayerId && isReady)
+                        isLocalPlayerReady = true;
+                }
             }
 
-            return new LobbySessionSnapshot(usernames.ToArray(), _currentPlayerCount, _targetPlayerCapacity);
+            return new LobbySessionSnapshot(usernames.ToArray(), readyStates.ToArray(), isLocalPlayerReady, _currentPlayerCount, _targetPlayerCapacity);
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        private void RPC_RequestReadyLock(RpcInfo info = default)
+        {
+            if (!info.Source.IsRealPlayer)
+                return;
+
+            LobbySessionState.FindForRunner(Runner)?.TryLockReady(Runner, info.Source);
         }
     }
 }
