@@ -15,7 +15,8 @@ namespace UI
         public event Action<UIWaitingRoomViewData> ViewDataChanged;
 
         [Header("References")]
-        [SerializeField] private UIWaitingRoomPlayerEntry playerEntryPrefab;
+        [SerializeField] private UIWaitingRoomPlayerEntry playerEntryLocalPrefab;
+        [SerializeField] private UIWaitingRoomPlayerEntry playerEntryDisplayPrefab;
         [SerializeField] private Transform leftTeamParent;
         [SerializeField] private Transform rightTeamParent;
         [SerializeField] private TMP_Text waitingStatusText;
@@ -28,8 +29,14 @@ namespace UI
 
         private static readonly UIWaitingRoomViewData EmptyViewData = UIWaitingRoomViewData.CreateEmpty();
         private LobbySessionState _lobbySessionState;
-        private readonly Dictionary<int, UIWaitingRoomPlayerEntry> _playerEntries = new();
+        private readonly Dictionary<int, PlayerEntryInstance> _playerEntries = new();
         private PaddleColorPalette _paddleColorPalette;
+
+        private sealed class PlayerEntryInstance
+        {
+            public UIWaitingRoomPlayerEntry entry;
+            public bool usesLocalPrefab;
+        }
 
         public UIWaitingRoomViewData CurrentViewData { get; private set; } = EmptyViewData;
 
@@ -226,19 +233,19 @@ namespace UI
 
         private void RefreshPlayerEntries(UIWaitingRoomViewData viewData)
         {
-            if (playerEntryPrefab == null)
+            if (playerEntryLocalPrefab == null && playerEntryDisplayPrefab == null)
             {
                 ClearPlayerEntries();
                 return;
             }
 
             var activePlayerIds = new HashSet<int>();
-            RefreshTeamEntries(viewData.leftTeamRows, leftTeamParent, activePlayerIds);
-            RefreshTeamEntries(viewData.rightTeamRows, rightTeamParent, activePlayerIds);
+            RefreshTeamEntries(viewData.leftTeamRows, viewData.colorOptions, leftTeamParent, activePlayerIds);
+            RefreshTeamEntries(viewData.rightTeamRows, viewData.colorOptions, rightTeamParent, activePlayerIds);
             RemoveStaleEntries(activePlayerIds);
         }
 
-        private void RefreshTeamEntries(UIWaitingRoomViewData.PlayerRowViewData[] rows, Transform parent, ISet<int> activePlayerIds)
+        private void RefreshTeamEntries(UIWaitingRoomViewData.PlayerRowViewData[] rows, UIWaitingRoomViewData.ColorOptionViewData[] colorOptions, Transform parent, ISet<int> activePlayerIds)
         {
             if (rows == null)
                 return;
@@ -250,23 +257,49 @@ namespace UI
                 if (!row.hasValue)
                     continue;
 
-                var entry = GetOrCreatePlayerEntry(row.playerId, resolvedParent);
+                var entry = GetOrCreatePlayerEntry(row.playerId, row.isLocalPlayer, resolvedParent);
+                if (entry == null)
+                    continue;
+
                 if (entry.transform.parent != resolvedParent)
                     entry.transform.SetParent(resolvedParent, false);
 
                 entry.transform.SetSiblingIndex(i);
-                entry.Bind(this, row, readyButtonLabel, readyLockedButtonLabel);
+                entry.Bind(this, row, colorOptions, readyButtonLabel, readyLockedButtonLabel);
                 activePlayerIds.Add(row.playerId);
             }
         }
 
-        private UIWaitingRoomPlayerEntry GetOrCreatePlayerEntry(int playerId, Transform parent)
+        private UIWaitingRoomPlayerEntry GetOrCreatePlayerEntry(int playerId, bool requiresLocalPrefab, Transform parent)
         {
-            if (_playerEntries.TryGetValue(playerId, out var entry) && entry != null)
-                return entry;
+            if (_playerEntries.TryGetValue(playerId, out var entryInstance))
+            {
+                if (entryInstance.entry == null)
+                {
+                    _playerEntries.Remove(playerId);
+                }
+                else if (entryInstance.usesLocalPrefab == requiresLocalPrefab)
+                {
+                    return entryInstance.entry;
+                }
+                else
+                {
+                    Destroy(entryInstance.entry.gameObject);
+                    _playerEntries.Remove(playerId);
+                }
+            }
 
-            entry = Instantiate(playerEntryPrefab, parent != null ? parent : transform);
-            _playerEntries[playerId] = entry;
+            var prefab = requiresLocalPrefab ? playerEntryLocalPrefab : playerEntryDisplayPrefab;
+            if (prefab == null)
+                return null;
+
+            var entry = Instantiate(prefab, parent != null ? parent : transform);
+            _playerEntries[playerId] = new PlayerEntryInstance
+            {
+                entry = entry,
+                usesLocalPrefab = requiresLocalPrefab
+            };
+
             return entry;
         }
 
@@ -275,15 +308,15 @@ namespace UI
             var stalePlayerIds = new List<int>();
             foreach (var entry in _playerEntries)
             {
-                if (!activePlayerIds.Contains(entry.Key) || entry.Value == null)
+                if (!activePlayerIds.Contains(entry.Key) || entry.Value == null || entry.Value.entry == null)
                     stalePlayerIds.Add(entry.Key);
             }
 
             for (var i = 0; i < stalePlayerIds.Count; i++)
             {
                 var playerId = stalePlayerIds[i];
-                if (_playerEntries.TryGetValue(playerId, out var entry) && entry != null)
-                    Destroy(entry.gameObject);
+                if (_playerEntries.TryGetValue(playerId, out var entry) && entry != null && entry.entry != null)
+                    Destroy(entry.entry.gameObject);
 
                 _playerEntries.Remove(playerId);
             }
@@ -293,8 +326,8 @@ namespace UI
         {
             foreach (var entry in _playerEntries.Values)
             {
-                if (entry != null)
-                    Destroy(entry.gameObject);
+                if (entry != null && entry.entry != null)
+                    Destroy(entry.entry.gameObject);
             }
 
             _playerEntries.Clear();
