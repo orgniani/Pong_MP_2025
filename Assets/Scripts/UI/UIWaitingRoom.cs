@@ -1,51 +1,131 @@
-using Fusion.Sockets;
-using Fusion;
+using Managers.Network;
+using System;
+using TMPro;
 using UnityEngine;
-using System.Linq;
+using UnityEngine.UI;
 
 
 namespace UI
 {
-    public class UIWaitingRoom : MonoBehaviour, INetworkRunnerCallbacks
+    public class UIWaitingRoom : MonoBehaviour
     {
-        private NetworkRunner _runner;
+        public event Action Enabled;
 
-        private void Start()
+        [Header("References")]
+        [SerializeField] private TMP_Text rosterText;
+        [SerializeField] private TMP_Text waitingStatusText;
+        [SerializeField] private Button leaveButton;
+        [SerializeField] private Button readyButton;
+        [SerializeField] private TMP_Text readyButtonText;
+
+        [Header("Content")]
+        [SerializeField] private string waitingStatusPrefix = "Waiting for more players";
+        [SerializeField] private string readyButtonLabel = "Ready";
+        [SerializeField] private string readyLockedButtonLabel = "Ready Locked";
+
+        private LobbySessionState _lobbySessionState;
+
+        private void OnEnable()
         {
-            Helpers.PlayerNameLookup.ResetCachedSideNames();
-            _runner = FindFirstObjectByType<NetworkRunner>();
-            if (_runner != null)
-                _runner.AddCallbacks(this);
+            if (leaveButton != null)
+                leaveButton.onClick.AddListener(HandleLeaveClicked);
+
+            if (readyButton != null)
+                readyButton.onClick.AddListener(HandleReadyClicked);
+
+            Enabled?.Invoke();
         }
 
-        private void OnDestroy()
+        private void OnDisable()
         {
-            if (_runner != null)
-                _runner.RemoveCallbacks(this);
+            if (leaveButton != null)
+                leaveButton.onClick.RemoveListener(HandleLeaveClicked);
+
+            if (readyButton != null)
+                readyButton.onClick.RemoveListener(HandleReadyClicked);
+
+            Unbind();
         }
 
-        public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+        public void Bind(LobbySessionState lobbySessionState)
         {
-            Debug.Log($"Player {player.PlayerId} joined. Total: {runner.ActivePlayers.Count()}");
+            if (ReferenceEquals(_lobbySessionState, lobbySessionState))
+            {
+                RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : CreateEmptySnapshot());
+                return;
+            }
+
+            Unbind();
+            _lobbySessionState = lobbySessionState;
+
+            if (_lobbySessionState != null)
+            {
+                _lobbySessionState.SnapshotChanged += RefreshView;
+                RefreshView(_lobbySessionState.CurrentSnapshot);
+                return;
+            }
+
+            RefreshView(CreateEmptySnapshot());
         }
 
-        public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
-        public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
-        public void OnConnectedToServer(NetworkRunner runner) { }
-        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
-        public void OnInput(NetworkRunner runner, NetworkInput input) { }
-        public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
-        public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
-        public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
-        public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
-        public void OnSessionListUpdated(NetworkRunner runner, System.Collections.Generic.List<SessionInfo> sessionList) { }
-        public void OnCustomAuthenticationResponse(NetworkRunner runner, System.Collections.Generic.Dictionary<string, object> data) { }
-        public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-        public void OnSceneLoadDone(NetworkRunner runner) { }
-        public void OnSceneLoadStart(NetworkRunner runner) { }
-        public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
-        public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
-        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, System.ArraySegment<byte> data) { }
-        public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
+        public void Unbind()
+        {
+            if (_lobbySessionState != null)
+                _lobbySessionState.SnapshotChanged -= RefreshView;
+
+            _lobbySessionState = null;
+            RefreshView(CreateEmptySnapshot());
+        }
+
+        private void RefreshView(LobbySessionSnapshot snapshot)
+        {
+            if (rosterText != null)
+                rosterText.text = snapshot.WaitingUsernames != null && snapshot.WaitingUsernames.Length > 0
+                    ? BuildRosterText(snapshot)
+                    : string.Empty;
+
+            if (waitingStatusText != null)
+            {
+                var counter = $"{snapshot.CurrentPlayerCount}/{snapshot.TargetPlayerCapacity}";
+                waitingStatusText.text = string.IsNullOrWhiteSpace(waitingStatusPrefix)
+                    ? counter
+                    : $"{waitingStatusPrefix.Trim()} ({counter})";
+            }
+
+            if (readyButton != null)
+                readyButton.interactable = !snapshot.IsLocalPlayerReady;
+
+            if (readyButtonText != null)
+                readyButtonText.text = snapshot.IsLocalPlayerReady ? readyLockedButtonLabel : readyButtonLabel;
+        }
+
+        private void HandleLeaveClicked()
+        {
+            SessionExitToMainMenu.Execute("[UIWaitingRoom]");
+        }
+
+        private void HandleReadyClicked()
+        {
+            _lobbySessionState?.RequestLocalPlayerReadyLock();
+        }
+
+        private static LobbySessionSnapshot CreateEmptySnapshot()
+        {
+            return new LobbySessionSnapshot(Array.Empty<string>(), Array.Empty<bool>(), false, 0, 0);
+        }
+
+        private static string BuildRosterText(LobbySessionSnapshot snapshot)
+        {
+            var lines = new string[snapshot.WaitingUsernames.Length];
+
+            for (var i = 0; i < snapshot.WaitingUsernames.Length; i++)
+            {
+                var isReady = snapshot.ReadyStates != null && i < snapshot.ReadyStates.Length && snapshot.ReadyStates[i];
+                var username = (snapshot.WaitingUsernames[i] ?? string.Empty).ToUpperInvariant();
+                lines[i] = isReady ? $"{username} (READY)" : username;
+            }
+
+            return string.Join(Environment.NewLine, lines);
+        }
     }
 }

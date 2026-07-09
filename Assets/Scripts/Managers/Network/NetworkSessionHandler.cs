@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
+using Managers;
 using UnityEngine;
 
 namespace Managers.Network
@@ -122,6 +123,7 @@ namespace Managers.Network
             var args = new StartGameArgs()
             {
                 GameMode = GameMode.Client,
+                ConnectionToken = LobbySessionState.CreateConnectionToken(LocalPlayerSession.Username),
                 SceneManager = GetOrAddSceneManager(runner),
                 SessionName = sessionName
             };

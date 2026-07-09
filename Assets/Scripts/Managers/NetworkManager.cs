@@ -28,6 +28,7 @@ namespace Managers
 
         [Header("Settings")]
         [SerializeField] private MatchRulesConfig matchRulesConfig;
+        [SerializeField] private bool enableLogs = false;
 
         private ScoreManager _scoreManager;
         private TimerManager _timerManager;
@@ -42,8 +43,7 @@ namespace Managers
 
         public event Action OnConnected;
         public event Action OnDisconnected;
-        public event Action<string> OnNewPlayerJoined;
-        public event Action<string> OnJoinedPlayerLeft;
+        public event Action OnRosterChanged;
 
         public NetworkPlayerSpawner PlayerSpawner => _playerSpawner;
         public GameOverManager GameOverManager => _gameOverManager;
@@ -51,11 +51,11 @@ namespace Managers
 
         private void Awake()
         {
-            _networkRunner = FindFirstObjectByType<NetworkRunner>();
-            if (_networkRunner == null)
+            var runner = FindFirstObjectByType<NetworkRunner>();
+            if (runner == null)
                 return;
 
-            _networkRunner.AddCallbacks(this);
+            BindRunner(runner);
         }
 
         private void OnDestroy()
@@ -78,6 +78,20 @@ namespace Managers
                 return;
 
             _networkRunner.Shutdown();
+        }
+
+        public bool BindRunner(NetworkRunner runner)
+        {
+            if (runner == null)
+                return false;
+
+            if (_networkRunner == runner)
+                return false;
+
+            _networkRunner?.RemoveCallbacks(this);
+            _networkRunner = runner;
+            _networkRunner.AddCallbacks(this);
+            return true;
         }
 
         public Transform GetSpawnPoint(int index)
@@ -129,7 +143,7 @@ namespace Managers
                 var matchSessionState = runner.GetComponent<MatchSessionState>();
                 if (matchSessionState != null && matchSessionState.IsPostGameCleanup)
                 {
-                    Debug.Log($"{LogPrefix} cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
+                    Log($"cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
                     runner.Disconnect(player, null);
                     return;
                 }
@@ -142,7 +156,7 @@ namespace Managers
                 }
             }
 
-            OnNewPlayerJoined?.Invoke("Player_" + player.PlayerId);
+            OnRosterChanged?.Invoke();
         }
 
         void INetworkRunnerCallbacks.OnPlayerLeft(NetworkRunner runner, PlayerRef player)
@@ -172,12 +186,12 @@ namespace Managers
                 }
             }
 
-            OnJoinedPlayerLeft?.Invoke("Player_" + player.PlayerId);
+            OnRosterChanged?.Invoke();
         }
 
         void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner)
         {
-            Debug.Log($"{LogPrefix} connected: mode={runner.GameMode}, session='{runner.SessionInfo.Name}'");
+            Log($"connected: mode={runner.GameMode}, session='{runner.SessionInfo.Name}'");
 
             if (_networkRunner.IsClient)
                 OnConnected?.Invoke();
@@ -295,7 +309,7 @@ namespace Managers
             var playersToDisconnect = runner.ActivePlayers.ToArray();
             foreach (var player in playersToDisconnect)
             {
-                Debug.Log($"{LogPrefix} disconnecting player={player.PlayerId} during post-game cleanup");
+                Log($"disconnecting player={player.PlayerId} during post-game cleanup");
                 runner.Disconnect(player, null);
             }
         }
@@ -363,6 +377,14 @@ namespace Managers
         private int ResolveMinPlayersToStart()
         {
             return matchRulesConfig != null ? matchRulesConfig.ResolveMinPlayersToStart() : 1;
+        }
+
+        private void Log(string message)
+        {
+            if (!enableLogs)
+                return;
+
+            Debug.Log($"{LogPrefix} {message}", this);
         }
 
         private static bool IsGameSceneActive()

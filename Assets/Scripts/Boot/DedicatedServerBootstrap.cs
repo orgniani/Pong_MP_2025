@@ -50,6 +50,7 @@ namespace Boot
             runnerObj.AddComponent<MatchSessionState>();
             var runner = runnerObj.GetComponent<NetworkRunner>();
             runner.ProvideInput = false;
+            LobbyRunnerCallbacks.EnsureOnRunner(runner);
 
             var shutdownTcs = new TaskCompletionSource<ShutdownReason>();
             runner.AddCallbacks(new DedicatedServerMatchFlow(matchRulesConfig, shutdownTcs));

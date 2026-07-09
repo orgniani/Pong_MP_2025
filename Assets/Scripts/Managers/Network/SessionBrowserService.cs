@@ -74,6 +74,8 @@ namespace Managers.Network
                 await ShutdownLobbyRunnerAsync();
 
                 var gameRunner = CreateRunner("NetworkRunner");
+                LobbyRunnerCallbacks.EnsureOnRunner(gameRunner);
+
                 var ok = await _sessionHandler.StartClient(gameRunner, sessionName);
                 Log($"JoinSession '{sessionName}' ok={ok}");
 

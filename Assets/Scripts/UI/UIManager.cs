@@ -56,11 +56,10 @@ namespace UI
             if (NetworkManager.Instance)
             {
                 NetworkManager.Instance.OnDisconnected += TriggerGameOver;
-                NetworkManager.Instance.OnNewPlayerJoined += HandleRosterChanged;
-                NetworkManager.Instance.OnJoinedPlayerLeft += HandleRosterChanged;
+                NetworkManager.Instance.OnRosterChanged += HandleRosterChanged;
             }
 
-            Player.OnAnyUsernameChanged += HandleUsernameChanged;
+            Player.OnAnyUsernameChanged += HandleRosterChanged;
         }
 
         private void OnDisable()
@@ -70,11 +69,10 @@ namespace UI
             if (NetworkManager.Instance)
             {
                 NetworkManager.Instance.OnDisconnected -= TriggerGameOver;
-                NetworkManager.Instance.OnNewPlayerJoined -= HandleRosterChanged;
-                NetworkManager.Instance.OnJoinedPlayerLeft -= HandleRosterChanged;
+                NetworkManager.Instance.OnRosterChanged -= HandleRosterChanged;
             }
 
-            Player.OnAnyUsernameChanged -= HandleUsernameChanged;
+            Player.OnAnyUsernameChanged -= HandleRosterChanged;
 
             CursorLocker.Unlock();
         }
@@ -147,12 +145,7 @@ namespace UI
                 ShowGameOver(_scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty);
         }
 
-        private void HandleRosterChanged(string _)
-        {
-            _uiScore?.RefreshNames();
-        }
-
-        private void HandleUsernameChanged()
+        private void HandleRosterChanged()
         {
             _uiScore?.RefreshNames();
         }
@@ -174,17 +167,7 @@ namespace UI
 
         private void ReturnToMainMenu()
         {
-            if (NetworkManager.Instance && !NetworkManager.Instance.IsServer)
-                NetworkManager.Instance.Shutdown();
-
-            var index = SceneCatalog.GetMainMenuIndex(-1);
-            if (index < 0)
-            {
-                Debug.LogError("[UIManager] Could not resolve MainMenu scene index.");
-                return;
-            }
-
-            UnityEngine.SceneManagement.SceneManager.LoadScene(index);
+            SessionExitToMainMenu.Execute("[UIManager]");
         }
 
         private void TryRelockCursorOnClick()
