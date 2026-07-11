@@ -1,6 +1,6 @@
-using TMPro;
 using System;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,15 +11,11 @@ namespace UI
         [Header("Local References")]
         [SerializeField] private Button readyButton;
         [SerializeField] private TMP_Text readyButtonText;
-        [SerializeField] private TMP_Dropdown colorDropdown;
+        [SerializeField] private UIWaitingRoomColorDropdown colorDropdown;
         [SerializeField] private Transform dropdownTemplateContentParent;
         [SerializeField] private UIWaitingRoomColorItem colorItemPrefab;
 
         private UIWaitingRoomViewData.ColorOptionViewData[] _colorOptions = Array.Empty<UIWaitingRoomViewData.ColorOptionViewData>();
-        private int _selectedColorId = -1;
-        private bool _suppressDropdownCallbacks;
-        private Transform _runtimeDropdownContentParent;
-        private int _runtimeDropdownItemCount = -1;
 
         private void OnEnable()
         {
@@ -27,7 +23,7 @@ namespace UI
                 readyButton.onClick.AddListener(HandleReadyClicked);
 
             if (colorDropdown != null)
-                colorDropdown.onValueChanged.AddListener(HandleColorDropdownValueChanged);
+                colorDropdown.OpenStateChanged += HandleColorDropdownOpenStateChanged;
         }
 
         private void OnDisable()
@@ -36,30 +32,11 @@ namespace UI
                 readyButton.onClick.RemoveListener(HandleReadyClicked);
 
             if (colorDropdown != null)
-                colorDropdown.onValueChanged.RemoveListener(HandleColorDropdownValueChanged);
-
-            _runtimeDropdownContentParent = null;
-            _runtimeDropdownItemCount = -1;
-        }
-
-        private void LateUpdate()
-        {
-            if (colorDropdown == null || _colorOptions.Length == 0)
-                return;
-
-            var runtimeContentParent = FindRuntimeDropdownContentParent();
-            var runtimeChildCount = runtimeContentParent != null ? runtimeContentParent.childCount : -1;
-            if (ReferenceEquals(runtimeContentParent, _runtimeDropdownContentParent) && runtimeChildCount == _runtimeDropdownItemCount)
-                return;
-
-            _runtimeDropdownContentParent = runtimeContentParent;
-            _runtimeDropdownItemCount = runtimeChildCount;
-            RefreshRuntimeColorItems();
+                colorDropdown.OpenStateChanged -= HandleColorDropdownOpenStateChanged;
         }
 
         protected override void BindRow(UIWaitingRoomViewData.PlayerRowViewData row, UIWaitingRoomViewData.ColorOptionViewData[] colorOptions, string readyLabel, string readyLockedLabel)
         {
-            _selectedColorId = row.colorId;
             _colorOptions = colorOptions ?? Array.Empty<UIWaitingRoomViewData.ColorOptionViewData>();
 
             if (readyButton != null)
@@ -71,43 +48,16 @@ namespace UI
             if (colorDropdown != null)
             {
                 colorDropdown.interactable = row.canUseColorAction;
-                RebuildDropdownOptions(_colorOptions, row.colorId);
+                colorDropdown.RefreshVisibility();
             }
 
-            _runtimeDropdownContentParent = null;
-            _runtimeDropdownItemCount = -1;
-            RefreshRuntimeColorItems();
+            RebuildColorItems();
+
+            if (colorDropdown != null)
+                colorDropdown.RefreshLayout();
         }
 
-        public void RebuildDropdownOptions(UIWaitingRoomViewData.ColorOptionViewData[] colorOptions, int selectedColorId)
-        {
-            if (colorDropdown == null)
-                return;
-
-            _colorOptions = colorOptions ?? Array.Empty<UIWaitingRoomViewData.ColorOptionViewData>();
-            _selectedColorId = selectedColorId;
-
-            EnsureTemplateColorItems();
-
-            var options = new List<TMP_Dropdown.OptionData>(_colorOptions.Length);
-            for (var i = 0; i < _colorOptions.Length; i++)
-                options.Add(new TMP_Dropdown.OptionData(string.Empty));
-
-            _suppressDropdownCallbacks = true;
-            colorDropdown.options = options;
-
-            if (_selectedColorId >= 0 && _selectedColorId < _colorOptions.Length)
-                colorDropdown.SetValueWithoutNotify(_selectedColorId);
-            else if (_colorOptions.Length > 0)
-                colorDropdown.SetValueWithoutNotify(0);
-
-            colorDropdown.RefreshShownValue();
-            _suppressDropdownCallbacks = false;
-
-            RefreshRuntimeColorItems();
-        }
-
-        private void EnsureTemplateColorItems()
+        private void RebuildColorItems()
         {
             if (dropdownTemplateContentParent == null || colorItemPrefab == null)
                 return;
@@ -130,7 +80,7 @@ namespace UI
             for (var i = existingItems.Count - 1; i >= _colorOptions.Length; i--)
                 Destroy(existingItems[i].gameObject);
 
-            BindColorItems(dropdownTemplateContentParent);
+            BindColorItems();
         }
 
         private void HandleReadyClicked()
@@ -141,93 +91,77 @@ namespace UI
             waitingRoom.TryRequestReadyForPlayer(playerId);
         }
 
-        private void HandleColorDropdownValueChanged(int optionIndex)
+        private void HandleColorDropdownOpenStateChanged(bool isOpen)
         {
-            if (_suppressDropdownCallbacks || waitingRoom == null)
+            if (!isOpen)
                 return;
 
-            if (!TryGetColorOptionByIndex(optionIndex, out var option) || !option.isAvailableForLocalPlayer)
+            BindColorItems();
+
+            if (colorDropdown != null)
+                colorDropdown.RefreshLayout();
+        }
+
+        private void HandleColorSelected(int colorId)
+        {
+            if (waitingRoom == null)
+                return;
+
+            if (!TryGetColorOptionById(colorId, out var option) || !option.isAvailableForLocalPlayer)
             {
-                RestoreSelectedDropdownValue();
+                BindColorItems();
+                return;
+            }
+
+            if (option.isSelectedByLocalPlayer)
+            {
+                BindColorItems();
                 return;
             }
 
             if (!waitingRoom.TryRequestLocalPlayerColorChange(option.colorId))
             {
-                RestoreSelectedDropdownValue();
+                BindColorItems();
                 return;
             }
 
-            RestoreSelectedDropdownValue();
+            if (colorDropdown != null)
+                colorDropdown.Hide();
+
+            BindColorItems();
         }
 
-        private void RestoreSelectedDropdownValue()
+        private bool TryGetColorOptionById(int colorId, out UIWaitingRoomViewData.ColorOptionViewData option)
         {
-            if (colorDropdown == null)
-                return;
-
-            _suppressDropdownCallbacks = true;
-            if (_selectedColorId >= 0 && _selectedColorId < colorDropdown.options.Count)
-                colorDropdown.SetValueWithoutNotify(_selectedColorId);
-
-            colorDropdown.RefreshShownValue();
-            _suppressDropdownCallbacks = false;
-            RefreshRuntimeColorItems();
-        }
-
-        private bool TryGetColorOptionByIndex(int optionIndex, out UIWaitingRoomViewData.ColorOptionViewData option)
-        {
-            if (optionIndex >= 0 && optionIndex < _colorOptions.Length)
+            for (var i = 0; i < _colorOptions.Length; i++)
             {
-                option = _colorOptions[optionIndex];
-                return true;
+                if (_colorOptions[i].colorId == colorId)
+                {
+                    option = _colorOptions[i];
+                    return true;
+                }
             }
 
             option = default;
             return false;
         }
 
-        private void RefreshRuntimeColorItems()
+        private void BindColorItems()
         {
-            if (_colorOptions.Length == 0)
-                return;
-
-            BindColorItems(dropdownTemplateContentParent);
-            BindColorItems(FindRuntimeDropdownContentParent());
-        }
-
-        private void BindColorItems(Transform contentParent)
-        {
-            if (contentParent == null)
+            if (dropdownTemplateContentParent == null)
                 return;
 
             var itemIndex = 0;
-            for (var i = 0; i < contentParent.childCount && itemIndex < _colorOptions.Length; i++)
+            for (var i = 0; i < dropdownTemplateContentParent.childCount && itemIndex < _colorOptions.Length; i++)
             {
-                var child = contentParent.GetChild(i);
+                var child = dropdownTemplateContentParent.GetChild(i);
                 var colorItem = child.GetComponent<UIWaitingRoomColorItem>();
                 if (colorItem == null)
                     continue;
 
-                colorItem.Bind(_colorOptions[itemIndex]);
+                colorItem.Bind(_colorOptions[itemIndex], HandleColorSelected);
                 itemIndex++;
             }
-        }
-
-        private Transform FindRuntimeDropdownContentParent()
-        {
-            if (colorDropdown == null)
-                return null;
-
-            var rootCanvas = colorDropdown.GetComponentInParent<Canvas>();
-            if (rootCanvas == null || rootCanvas.rootCanvas == null)
-                return null;
-
-            var dropdownList = FindDescendantByName(rootCanvas.rootCanvas.transform, "Dropdown List");
-            if (dropdownList == null)
-                return null;
-
-            return dropdownList.Find("Viewport/Content");
         }
     }
 }
