@@ -12,11 +12,11 @@ namespace UI
     public class UIWaitingRoom : MonoBehaviour
     {
         public event Action Enabled;
-        public event Action<UIWaitingRoomViewData> ViewDataChanged;
+        public event Action<UIViewData> ViewDataChanged;
 
         [Header("References")]
-        [SerializeField] private UIWaitingRoomPlayerEntry playerEntryLocalPrefab;
-        [SerializeField] private UIWaitingRoomPlayerEntry playerEntryDisplayPrefab;
+        [SerializeField] private UIPlayerEntry playerEntryLocalPrefab;
+        [SerializeField] private UIPlayerEntry playerEntryDisplayPrefab;
         [SerializeField] private Transform leftTeamParent;
         [SerializeField] private Transform rightTeamParent;
         [SerializeField] private TMP_Text waitingStatusText;
@@ -27,18 +27,18 @@ namespace UI
         [SerializeField] private string readyButtonLabel = "Ready";
         [SerializeField] private string readyLockedButtonLabel = "Ready Locked";
 
-        private static readonly UIWaitingRoomViewData EmptyViewData = UIWaitingRoomViewData.CreateEmpty();
+        private static readonly UIViewData EmptyViewData = UIViewData.CreateEmpty();
         private LobbySessionState _lobbySessionState;
         private readonly Dictionary<int, PlayerEntryInstance> _playerEntries = new();
         private PaddleColorPalette _paddleColorPalette;
 
         private sealed class PlayerEntryInstance
         {
-            public UIWaitingRoomPlayerEntry entry;
+            public UIPlayerEntry entry;
             public bool usesLocalPrefab;
         }
 
-        public UIWaitingRoomViewData CurrentViewData { get; private set; } = EmptyViewData;
+        public UIViewData CurrentViewData { get; private set; } = EmptyViewData;
 
         private void OnEnable()
         {
@@ -140,6 +140,9 @@ namespace UI
             if (!localRow.hasValue || !localRow.canUseColorAction)
                 return false;
 
+            if (localRow.colorId == colorId)
+                return false;
+
             if (!CurrentViewData.TryGetColorOption(colorId, out var option) || !option.isAvailableForLocalPlayer)
                 return false;
 
@@ -147,17 +150,17 @@ namespace UI
             return true;
         }
 
-        public bool TryGetRowViewData(int playerId, out UIWaitingRoomViewData.PlayerRowViewData row)
+        public bool TryGetRowViewData(int playerId, out UIViewData.PlayerRowViewData row)
         {
             return CurrentViewData.TryGetRow(playerId, out row);
         }
 
-        private UIWaitingRoomViewData BuildViewData(LobbySessionSnapshot snapshot)
+        private UIViewData BuildViewData(LobbySessionSnapshot snapshot)
         {
             var rowCount = snapshot.WaitingUsernames != null ? snapshot.WaitingUsernames.Length : 0;
-            var allRows = new UIWaitingRoomViewData.PlayerRowViewData[rowCount];
-            var leftRows = new List<UIWaitingRoomViewData.PlayerRowViewData>(rowCount);
-            var rightRows = new List<UIWaitingRoomViewData.PlayerRowViewData>(rowCount);
+            var allRows = new UIViewData.PlayerRowViewData[rowCount];
+            var leftRows = new List<UIViewData.PlayerRowViewData>(rowCount);
+            var rightRows = new List<UIViewData.PlayerRowViewData>(rowCount);
             var claimedColors = new Dictionary<int, int>();
             var localPlayerId = snapshot.LocalPlayerId;
             var localPlayerColorId = -1;
@@ -171,7 +174,7 @@ namespace UI
                 var laneId = snapshot.LaneIds != null && i < snapshot.LaneIds.Length ? snapshot.LaneIds[i] : 0;
                 var colorId = snapshot.ColorIds != null && i < snapshot.ColorIds.Length ? snapshot.ColorIds[i] : -1;
                 var isLocalPlayer = playerId == localPlayerId && playerId >= 0;
-                var row = new UIWaitingRoomViewData.PlayerRowViewData(
+                var row = new UIViewData.PlayerRowViewData(
                     true,
                     playerId,
                     username,
@@ -198,26 +201,24 @@ namespace UI
             }
 
             var colorOptions = BuildColorOptions(claimedColors, localPlayerColorId);
-            return new UIWaitingRoomViewData(allRows, leftRows.ToArray(), rightRows.ToArray(), colorOptions, localPlayerId, snapshot.IsLocalPlayerReady, snapshot.CurrentPlayerCount, snapshot.TargetPlayerCapacity);
+            return new UIViewData(allRows, leftRows.ToArray(), rightRows.ToArray(), colorOptions, localPlayerId, snapshot.IsLocalPlayerReady, snapshot.CurrentPlayerCount, snapshot.TargetPlayerCapacity);
         }
 
-        private UIWaitingRoomViewData.ColorOptionViewData[] BuildColorOptions(IReadOnlyDictionary<int, int> claimedColors, int localPlayerColorId)
+        private UIViewData.ColorOptionViewData[] BuildColorOptions(IReadOnlyDictionary<int, int> claimedColors, int localPlayerColorId)
         {
             if (_paddleColorPalette == null || _paddleColorPalette.Count <= 0)
-                return Array.Empty<UIWaitingRoomViewData.ColorOptionViewData>();
+                return Array.Empty<UIViewData.ColorOptionViewData>();
 
-            var options = new UIWaitingRoomViewData.ColorOptionViewData[_paddleColorPalette.Count];
+            var options = new UIViewData.ColorOptionViewData[_paddleColorPalette.Count];
             for (var colorId = 0; colorId < _paddleColorPalette.Count; colorId++)
             {
                 var isClaimed = claimedColors.TryGetValue(colorId, out var claimedByPlayerId);
-                var isSelectedByLocalPlayer = colorId == localPlayerColorId;
-                options[colorId] = new UIWaitingRoomViewData.ColorOptionViewData(
+                options[colorId] = new UIViewData.ColorOptionViewData(
                     colorId,
                     _paddleColorPalette.ResolveColor(colorId),
                     isClaimed,
                     isClaimed ? claimedByPlayerId : -1,
-                    isSelectedByLocalPlayer,
-                    !isClaimed || isSelectedByLocalPlayer);
+                    !isClaimed || colorId == localPlayerColorId);
             }
 
             return options;
@@ -231,7 +232,7 @@ namespace UI
             return _paddleColorPalette.ResolveColor(colorId);
         }
 
-        private void RefreshPlayerEntries(UIWaitingRoomViewData viewData)
+        private void RefreshPlayerEntries(UIViewData viewData)
         {
             if (playerEntryLocalPrefab == null && playerEntryDisplayPrefab == null)
             {
@@ -245,7 +246,7 @@ namespace UI
             RemoveStaleEntries(activePlayerIds);
         }
 
-        private void RefreshTeamEntries(UIWaitingRoomViewData.PlayerRowViewData[] rows, UIWaitingRoomViewData.ColorOptionViewData[] colorOptions, Transform parent, ISet<int> activePlayerIds)
+        private void RefreshTeamEntries(UIViewData.PlayerRowViewData[] rows, UIViewData.ColorOptionViewData[] colorOptions, Transform parent, ISet<int> activePlayerIds)
         {
             if (rows == null)
                 return;
@@ -265,12 +266,16 @@ namespace UI
                     entry.transform.SetParent(resolvedParent, false);
 
                 entry.transform.SetSiblingIndex(i);
-                entry.Bind(this, row, colorOptions, readyButtonLabel, readyLockedButtonLabel);
+                if (row.isLocalPlayer && entry is UIPlayerEntryLocal localEntry)
+                    localEntry.BindLocal(this, row, colorOptions, readyButtonLabel, readyLockedButtonLabel);
+                else
+                    entry.Bind(this, row, readyButtonLabel, readyLockedButtonLabel);
+
                 activePlayerIds.Add(row.playerId);
             }
         }
 
-        private UIWaitingRoomPlayerEntry GetOrCreatePlayerEntry(int playerId, bool requiresLocalPrefab, Transform parent)
+        private UIPlayerEntry GetOrCreatePlayerEntry(int playerId, bool requiresLocalPrefab, Transform parent)
         {
             if (_playerEntries.TryGetValue(playerId, out var entryInstance))
             {

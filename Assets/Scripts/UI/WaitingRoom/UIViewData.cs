@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace UI
 {
-    public sealed class UIWaitingRoomViewData
+    public sealed class UIViewData
     {
         public readonly struct PlayerRowViewData
         {
@@ -37,13 +37,12 @@ namespace UI
 
         public readonly struct ColorOptionViewData
         {
-            public ColorOptionViewData(int colorId, Color displayColor, bool isClaimed, int claimedByPlayerId, bool isSelectedByLocalPlayer, bool isAvailableForLocalPlayer)
+            public ColorOptionViewData(int colorId, Color displayColor, bool isClaimed, int claimedByPlayerId, bool isAvailableForLocalPlayer)
             {
                 this.colorId = colorId;
                 this.displayColor = displayColor;
                 this.isClaimed = isClaimed;
                 this.claimedByPlayerId = claimedByPlayerId;
-                this.isSelectedByLocalPlayer = isSelectedByLocalPlayer;
                 this.isAvailableForLocalPlayer = isAvailableForLocalPlayer;
             }
 
@@ -51,13 +50,12 @@ namespace UI
             public Color displayColor { get; }
             public bool isClaimed { get; }
             public int claimedByPlayerId { get; }
-            public bool isSelectedByLocalPlayer { get; }
             public bool isAvailableForLocalPlayer { get; }
         }
 
         private static readonly PlayerRowViewData EmptyPlayerRow = new(false, -1, string.Empty, 0, 0, -1, Color.white, false, false, false, false);
 
-        public UIWaitingRoomViewData(PlayerRowViewData[] allRows, PlayerRowViewData[] leftTeamRows, PlayerRowViewData[] rightTeamRows, ColorOptionViewData[] colorOptions, int localPlayerId, bool isLocalPlayerReady, int currentPlayerCount, int targetPlayerCapacity)
+        public UIViewData(PlayerRowViewData[] allRows, PlayerRowViewData[] leftTeamRows, PlayerRowViewData[] rightTeamRows, ColorOptionViewData[] colorOptions, int localPlayerId, bool isLocalPlayerReady, int currentPlayerCount, int targetPlayerCapacity)
         {
             this.allRows = allRows ?? Array.Empty<PlayerRowViewData>();
             this.leftTeamRows = leftTeamRows ?? Array.Empty<PlayerRowViewData>();
@@ -120,9 +118,9 @@ namespace UI
             return false;
         }
 
-        public static UIWaitingRoomViewData CreateEmpty()
+        public static UIViewData CreateEmpty()
         {
-            return new UIWaitingRoomViewData(Array.Empty<PlayerRowViewData>(), Array.Empty<PlayerRowViewData>(), Array.Empty<PlayerRowViewData>(), Array.Empty<ColorOptionViewData>(), -1, false, 0, 0);
+            return new UIViewData(Array.Empty<PlayerRowViewData>(), Array.Empty<PlayerRowViewData>(), Array.Empty<PlayerRowViewData>(), Array.Empty<ColorOptionViewData>(), -1, false, 0, 0);
         }
     }
 }

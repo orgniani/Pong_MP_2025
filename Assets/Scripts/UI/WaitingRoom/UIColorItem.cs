@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace UI
 {
-    public sealed class UIWaitingRoomColorItem : MonoBehaviour
+    public sealed class UIColorItem : MonoBehaviour
     {
         [Header("References")]
         [SerializeField] private Image swatchGraphic;
@@ -14,7 +14,7 @@ namespace UI
 
         private Action<int> _selectionRequested;
         private int _colorId = -1;
-        private bool _isSelectedByLocalPlayer;
+        private bool _isSelected;
 
         private void OnDisable()
         {
@@ -22,25 +22,25 @@ namespace UI
                 optionToggle.onValueChanged.RemoveListener(HandleToggleValueChanged);
         }
 
-        public void Bind(UIWaitingRoomViewData.ColorOptionViewData option, Action<int> selectionRequested)
+        public void Bind(UIViewData.ColorOptionViewData option, bool isSelected, Action<int> selectionRequested)
         {
             _colorId = option.colorId;
-            _isSelectedByLocalPlayer = option.isSelectedByLocalPlayer;
+            _isSelected = isSelected;
             _selectionRequested = selectionRequested;
 
             if (swatchGraphic != null)
                 swatchGraphic.color = option.displayColor;
 
             if (selectedCheckmark != null)
-                selectedCheckmark.SetActive(option.isSelectedByLocalPlayer);
+                selectedCheckmark.SetActive(_isSelected);
 
             if (blockedCross != null)
-                blockedCross.SetActive(option.isClaimed && !option.isSelectedByLocalPlayer);
+                blockedCross.SetActive(option.isClaimed && !_isSelected);
 
             if (optionToggle != null)
             {
                 optionToggle.onValueChanged.RemoveListener(HandleToggleValueChanged);
-                optionToggle.SetIsOnWithoutNotify(option.isSelectedByLocalPlayer);
+                optionToggle.SetIsOnWithoutNotify(_isSelected);
                 optionToggle.interactable = option.isAvailableForLocalPlayer;
                 optionToggle.onValueChanged.AddListener(HandleToggleValueChanged);
             }
@@ -53,19 +53,19 @@ namespace UI
 
             if (!optionToggle.interactable)
             {
-                optionToggle.SetIsOnWithoutNotify(_isSelectedByLocalPlayer);
+                optionToggle.SetIsOnWithoutNotify(_isSelected);
                 return;
             }
 
             if (!isOn)
             {
-                if (_isSelectedByLocalPlayer)
+                if (_isSelected)
                     optionToggle.SetIsOnWithoutNotify(true);
 
                 return;
             }
 
-            if (_isSelectedByLocalPlayer)
+            if (_isSelected)
             {
                 optionToggle.SetIsOnWithoutNotify(true);
                 return;

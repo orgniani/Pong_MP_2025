@@ -1,19 +1,25 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace UI
 {
-    public sealed class UIWaitingRoomColorDropdown : Selectable, IPointerClickHandler, ISubmitHandler, ICancelHandler
+    public sealed class UIColorDropdown : Selectable, IPointerClickHandler, ISubmitHandler, ICancelHandler
     {
         [SerializeField] private RectTransform templateRoot;
-
-        public event Action<bool> OpenStateChanged;
+        [SerializeField] private RectTransform contentParent;
+        [SerializeField] private UIColorItem colorItemPrefab;
+        [SerializeField] private Image selectedColorImage;
 
         private ScrollRect _scrollRect;
         private RectTransform _contentRect;
         private VerticalLayoutGroup _contentLayoutGroup;
+        private UIViewData.ColorOptionViewData[] _colorOptions = Array.Empty<UIViewData.ColorOptionViewData>();
+        private Action<int> _selectionRequested;
+        private int _selectedColorId = -1;
+        private Color _selectedDisplayColor = Color.white;
 
         public bool isOpen => templateRoot != null && templateRoot.gameObject.activeSelf;
 
@@ -59,6 +65,18 @@ namespace UI
             SetOpen(!isOpen);
         }
 
+        public void BindOptions(UIViewData.ColorOptionViewData[] colorOptions, int selectedColorId, Color selectedDisplayColor, Action<int> selectionRequested)
+        {
+            _colorOptions = colorOptions ?? Array.Empty<UIViewData.ColorOptionViewData>();
+            _selectedColorId = selectedColorId;
+            _selectedDisplayColor = selectedDisplayColor;
+            _selectionRequested = selectionRequested;
+
+            RefreshSelectedColorVisual();
+            RebuildItems();
+            RefreshLayout();
+        }
+
         public void RefreshVisibility()
         {
             if (!IsInteractable())
@@ -68,6 +86,7 @@ namespace UI
         public void RefreshLayout()
         {
             CacheTemplateComponents();
+            BindItems();
             ResizeContentHeight();
 
             if (templateRoot == null || !templateRoot.gameObject.activeInHierarchy)
@@ -100,10 +119,65 @@ namespace UI
             if (_scrollRect == null)
                 return;
 
-            _contentRect = _scrollRect.content;
+            if (contentParent == null)
+                contentParent = _scrollRect.content;
+
+            _contentRect = contentParent;
 
             if (_contentRect != null && _contentLayoutGroup == null)
                 _contentLayoutGroup = _contentRect.GetComponent<VerticalLayoutGroup>();
+        }
+
+        private void RebuildItems()
+        {
+            CacheTemplateComponents();
+
+            if (_contentRect == null || colorItemPrefab == null)
+                return;
+
+            var existingItems = new List<UIColorItem>(_contentRect.childCount);
+            for (var i = 0; i < _contentRect.childCount; i++)
+            {
+                var childItem = _contentRect.GetChild(i).GetComponent<UIColorItem>();
+                if (childItem != null)
+                    existingItems.Add(childItem);
+            }
+
+            for (var i = existingItems.Count; i < _colorOptions.Length; i++)
+            {
+                var item = Instantiate(colorItemPrefab, _contentRect);
+                item.name = colorItemPrefab.name;
+                existingItems.Add(item);
+            }
+
+            for (var i = existingItems.Count - 1; i >= _colorOptions.Length; i--)
+                Destroy(existingItems[i].gameObject);
+
+            BindItems();
+        }
+
+        private void BindItems()
+        {
+            if (_contentRect == null)
+                return;
+
+            var itemIndex = 0;
+            for (var i = 0; i < _contentRect.childCount && itemIndex < _colorOptions.Length; i++)
+            {
+                var child = _contentRect.GetChild(i);
+                var colorItem = child.GetComponent<UIColorItem>();
+                if (colorItem == null)
+                    continue;
+
+                colorItem.Bind(_colorOptions[itemIndex], _colorOptions[itemIndex].colorId == _selectedColorId, _selectionRequested);
+                itemIndex++;
+            }
+        }
+
+        private void RefreshSelectedColorVisual()
+        {
+            if (selectedColorImage != null)
+                selectedColorImage.color = _selectedDisplayColor;
         }
 
         private void ResizeContentHeight()
@@ -156,9 +230,10 @@ namespace UI
             dropdownGameObject.SetActive(shouldOpen);
 
             if (shouldOpen)
-                RefreshLayout();
+                RebuildItems();
 
-            OpenStateChanged?.Invoke(shouldOpen);
+            if (shouldOpen)
+                RefreshLayout();
         }
     }
 }

@@ -942,6 +942,9 @@ MonoBehaviour:
   m_Interactable: 1
   m_TargetGraphic: {fileID: 5550227762912375253}
   templateRoot: {fileID: 3626941542371073466}
+  contentParent: {fileID: 7582986635457046171}
+  colorItemPrefab: {fileID: 6071146931991892680, guid: 22e4fd2135cd2a84988224727e80fa31, type: 3}
+  selectedColorImage: {fileID: 5088905290399436058}
 --- !u!1 &5003365988507938362
 GameObject:
   m_ObjectHideFlags: 0
@@ -1172,12 +1175,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerNameText: {fileID: 7755746126803079915}
-  selectedColorImage: {fileID: 5088905290399436058}
   readyButton: {fileID: 6599541732079167760}
   readyButtonText: {fileID: 1825209737433444768}
   colorDropdown: {fileID: 5410089314105416839}
-  dropdownTemplateContentParent: {fileID: 7582986635457046171}
-  colorItemPrefab: {fileID: 6071146931991892680, guid: 22e4fd2135cd2a84988224727e80fa31, type: 3}
 --- !u!1 &7619230121521658557
 GameObject:
   m_ObjectHideFlags: 0
