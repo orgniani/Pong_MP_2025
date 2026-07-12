@@ -6,9 +6,14 @@ namespace PowerUps
 {
     public class PowerUpSpawner : NetworkBehaviour
     {
+        [Header("Prefabs")]
         [SerializeField] private NetworkObject powerUpPrefab;
-        [SerializeField] private float spawnInterval = 10f;
+
+        [Header("References")]
         [SerializeField] private Transform[] spawnPoints;
+
+        [Header("Config")]
+        [SerializeField] private float spawnInterval = 10f;
 
         [Networked] private float _timer { get; set; }
         [Networked] private NetworkRNG _rng { get; set; }

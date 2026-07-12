@@ -7,10 +7,14 @@ namespace UI
 {
     public sealed class UIColorItem : MonoBehaviour
     {
-        [Header("References")]
+        [Header("Graphics")]
         [SerializeField] private Image swatchGraphic;
+
+        [Header("Game objects")]
         [SerializeField] private GameObject selectedCheckmark;
         [SerializeField] private GameObject blockedCross;
+
+        [Header("Toggle")]
         [SerializeField] private Toggle optionToggle;
 
         private Action<int> _selectionRequested;

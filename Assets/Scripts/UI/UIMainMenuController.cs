@@ -7,15 +7,23 @@ namespace UI
 {
     public sealed class UIMainMenuController : MonoBehaviour
     {
+        [Header("Buttons")]
         [SerializeField] private Button play1v1Button;
         [SerializeField] private Button play2v2Button;
         [SerializeField] private Button creditsButton;
         [SerializeField] private Button closeCreditsButton;
         [SerializeField] private Button quitButton;
+
+        [Header("Text")]
         [SerializeField] private TMP_InputField usernameInputField;
+
+        [Header("References")]
         [SerializeField] private UISessionBrowser sessionBrowser;
+
+        [Header("Game objects")]
         [SerializeField] private GameObject creditsPanel;
         [SerializeField] private GameObject usernameValidationPanel;
+
         private const int UsernameCharacterLimit = 16;
 
         public string Username => usernameInputField != null ? usernameInputField.text.Trim() : string.Empty;

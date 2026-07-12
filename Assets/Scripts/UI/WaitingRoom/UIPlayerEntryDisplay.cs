@@ -6,8 +6,10 @@ namespace UI
 {
     public sealed class UIPlayerEntryDisplay : UIPlayerEntry
     {
-        [Header("Display References")]
+        [Header("Graphics")]
         [SerializeField] private Image selectedColorImage;
+
+        [Header("Text")]
         [SerializeField] private TMP_Text readyStateText;
 
         protected override void BindRow(UIViewData.PlayerRowViewData row, string readyLabel, string readyLockedLabel)

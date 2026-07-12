@@ -15,15 +15,21 @@ namespace UI
         public event Action Enabled;
         public event Action<UIViewData> ViewDataChanged;
 
-        [Header("References")]
+        [Header("Prefabs")]
         [SerializeField] private UIPlayerEntry playerEntryLocalPrefab;
         [SerializeField] private UIPlayerEntry playerEntryDisplayPrefab;
+
+        [Header("References")]
         [SerializeField] private Transform leftTeamParent;
         [SerializeField] private Transform rightTeamParent;
+
+        [Header("Text")]
         [SerializeField] private TMP_Text waitingStatusText;
+
+        [Header("Buttons")]
         [SerializeField] private Button leaveButton;
 
-        [Header("Content")]
+        [Header("Config")]
         [SerializeField] private string waitingStatusPrefix = "Waiting for more players";
         [SerializeField] private string readyButtonLabel = "Ready";
         [SerializeField] private string readyLockedButtonLabel = "Ready Locked";

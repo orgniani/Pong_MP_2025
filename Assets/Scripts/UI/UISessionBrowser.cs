@@ -11,15 +11,26 @@ namespace UI
 {
     public sealed class UISessionBrowser : MonoBehaviour
     {
+        [Header("References")]
         [SerializeField] private SessionBrowserService browserService;
-        [SerializeField] private GameObject panelRoot;
         [SerializeField] private Transform contentRoot;
+
+        [Header("Prefabs")]
         [SerializeField] private UISessionEntry entryPrefab;
+
+        [Header("Text")]
         [SerializeField] private TMP_Text headerText;
         [SerializeField] private TMP_Text emptyStateText;
+
+        [Header("Game objects")]
+        [SerializeField] private GameObject panelRoot;
+        [SerializeField] private GameObject loadingPanel;
+
+        [Header("Buttons")]
         [SerializeField] private Button refreshButton;
         [SerializeField] private Button backButton;
-        [SerializeField] private GameObject loadingPanel;
+
+        [Header("Config")]
         [SerializeField] private bool enableLogs = false;
 
         private readonly List<UISessionEntry> _spawnedEntries = new List<UISessionEntry>();

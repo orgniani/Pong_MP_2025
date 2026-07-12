@@ -7,9 +7,13 @@ namespace UI
 {
     public sealed class UIPlayerEntryLocal : UIPlayerEntry
     {
-        [Header("Local References")]
+        [Header("Buttons")]
         [SerializeField] private Button readyButton;
+
+        [Header("Text")]
         [SerializeField] private TMP_Text readyButtonText;
+
+        [Header("References")]
         [SerializeField] private UIColorDropdown colorDropdown;
 
         private UIViewData.ColorOptionViewData[] _colorOptions = Array.Empty<UIViewData.ColorOptionViewData>();

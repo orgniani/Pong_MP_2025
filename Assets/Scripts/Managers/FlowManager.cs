@@ -6,6 +6,7 @@ namespace Managers
     public class FlowManager : MonoBehaviour
     {
         [SerializeField] private float loadingDelay = 1f;
+
         public static FlowManager Instance { get; private set; }
 
         private void Awake()

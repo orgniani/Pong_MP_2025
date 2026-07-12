@@ -10,11 +10,14 @@ namespace Players
     [RequireComponent(typeof(Collider2D))]
     public class Player : NetworkBehaviour
     {
+        [Header("Config")]
         [SerializeField] private float speed = 8f;
         [SerializeField] private float arenaBoundX = 4f;
         [SerializeField] private float sizeAnimationDuration = 0.2f;
         [SerializeField] private AnimationCurve sizeAnimationCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
         [SerializeField] private PaddleColorPalette paddleColorPalette;
+
+        [Header("References")]
         [SerializeField] private SpriteRenderer viewRenderer;
 
         [Networked] private int _spawnPointIndex { get; set; }

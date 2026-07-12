@@ -5,7 +5,6 @@ namespace UI
 {
     public abstract class UIPlayerEntry : MonoBehaviour
     {
-        [Header("Shared References")]
         [SerializeField] private TMPro.TMP_Text playerNameText;
 
         protected UIWaitingRoom waitingRoom { get; private set; }

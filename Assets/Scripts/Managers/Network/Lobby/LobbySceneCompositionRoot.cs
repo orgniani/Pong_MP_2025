@@ -11,7 +11,6 @@ namespace Managers.Network
     [DisallowMultipleComponent]
     public sealed class LobbySceneCompositionRoot : MonoBehaviour
     {
-        [Header("References")]
         [SerializeField] private NetworkPrefabRef lobbyRosterStatePrefab;
         [SerializeField] private PaddleColorPalette paddleColorPalette;
         [SerializeField] private UIWaitingRoom waitingRoom;

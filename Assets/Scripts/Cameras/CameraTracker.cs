@@ -6,11 +6,11 @@ namespace Cameras
 {
     public class CameraTracker : MonoBehaviour
     {
-        [Header("Available Actions")]
+        [Header("Available actions")]
         [SerializeField] private bool orbit = true;
         [SerializeField] private bool zoom = true;
 
-        [Header("Tracking Settings")]
+        [Header("Tracking settings")]
         [SerializeField] private Vector3 baseFollowOffset = new Vector3(0f, 4f, -6f);
 
         [Header("Speed")]
@@ -21,11 +21,11 @@ namespace Cameras
         [SerializeField, Range(0f, 1f)] private float minZoom = 0.5f;
         [SerializeField, Range(1f, 5f)] private float maxZoom = 2f;
 
-        [Header("Vertical Angle")]
+        [Header("Vertical angle")]
         [SerializeField, Range(-85f, 85f)] private float minVerticalAngle = -30f;
         [SerializeField, Range(-85f, 85f)] private float maxVerticalAngle = 60f;
 
-        [Header("Smooth Speed")]
+        [Header("Smooth speed")]
         [SerializeField, Range(0f, 10f)] private float rotationSmoothSpeed = 5f;
         [SerializeField, Range(0f, 10f)] private float positionSmoothSpeed = 5f;
 

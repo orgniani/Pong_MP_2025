@@ -9,9 +9,12 @@ namespace UI
 {
     public sealed class UISessionEntry : MonoBehaviour
     {
+        [Header("Text")]
         [SerializeField] private TMP_Text sessionNameText;
         [SerializeField] private TMP_Text modeText;
         [SerializeField] private TMP_Text occupancyText;
+
+        [Header("Buttons")]
         [SerializeField] private Button joinButton;
 
         private string _sessionName;

@@ -8,10 +8,13 @@ namespace UI
 {
     public sealed class UIColorDropdown : Selectable, IPointerClickHandler, ISubmitHandler, ICancelHandler
     {
+        [Header("References")]
         [SerializeField] private RectTransform templateRoot;
         [SerializeField] private RectTransform contentParent;
-        [SerializeField] private UIColorItem colorItemPrefab;
         [SerializeField] private Image selectedColorImage;
+
+        [Header("Prefabs")]
+        [SerializeField] private UIColorItem colorItemPrefab;
 
         private ScrollRect _scrollRect;
         private RectTransform _contentRect;
