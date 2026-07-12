@@ -204,7 +204,7 @@ namespace Managers
                     && _gameOverManager != null && !_gameOverManager.IsGameOver
                     && runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner))
                 {
-                    _gameOverManager.TriggerForfeit("Opponent disconnected");
+                    _gameOverManager.TriggerForfeit(GameOverReason.PlayerDisconnected);
                 }
 
                 if (runner.ActivePlayers.Count() == 0)
@@ -298,7 +298,7 @@ namespace Managers
             if (runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner)
                 && _gameOverManager != null && !_gameOverManager.IsGameOver)
             {
-                _gameOverManager.TriggerForfeit("Opponent disconnected");
+                _gameOverManager.TriggerForfeit(GameOverReason.PlayerDisconnected);
             }
         }
         void INetworkRunnerCallbacks.OnSceneLoadStart (NetworkRunner runner) { }
