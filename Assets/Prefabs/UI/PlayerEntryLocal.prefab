@@ -112,7 +112,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 83.08, y: 0}
   m_Pivot: {x: 1, y: 0.5}
 --- !u!222 &5391032638543032965
 CanvasRenderer:
@@ -231,7 +231,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 104.44, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4894245156720812368
 CanvasRenderer:
@@ -860,7 +860,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: 83.08, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5493896861567708376
 CanvasRenderer:
@@ -943,8 +943,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 5550227762912375253}
   templateRoot: {fileID: 3626941542371073466}
   contentParent: {fileID: 7582986635457046171}
-  colorItemPrefab: {fileID: 6071146931991892680, guid: 22e4fd2135cd2a84988224727e80fa31, type: 3}
   selectedColorImage: {fileID: 5088905290399436058}
+  colorItemPrefab: {fileID: 6071146931991892680, guid: 22e4fd2135cd2a84988224727e80fa31, type: 3}
 --- !u!1 &5003365988507938362
 GameObject:
   m_ObjectHideFlags: 0
@@ -1157,7 +1157,7 @@ MonoBehaviour:
   m_Spacing: 5
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 1
-  m_ChildControlWidth: 1
+  m_ChildControlWidth: 0
   m_ChildControlHeight: 1
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0

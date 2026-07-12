@@ -25,7 +25,8 @@ namespace UI
         [SerializeField] private GameObject creditsPanel;
         [SerializeField] private GameObject usernameValidationPanel;
 
-        private const int UsernameCharacterLimit = 16;
+        [Header("Settings")]
+        [SerializeField] private int usernameCharacterLimit = 10;
 
         public string Username => usernameInputField != null ? usernameInputField.text.Trim() : string.Empty;
 
@@ -37,7 +38,8 @@ namespace UI
                 return;
             }
 
-            usernameInputField.characterLimit = UsernameCharacterLimit;
+            usernameInputField.characterLimit = usernameCharacterLimit;
+            usernameInputField.onValidateInput = OnValidateUsernameInput;
             usernameInputField.SetTextWithoutNotify(Managers.LocalPlayerSession.Username);
 
             play1v1Button.onClick.AddListener(OnPlay1v1Clicked);
@@ -67,6 +69,11 @@ namespace UI
         private void OnPlay2v2Clicked()
         {
             TryOpenSessionBrowser(MatchMode.TwoVsTwo);
+        }
+
+        private static char OnValidateUsernameInput(string text, int charIndex, char addedChar)
+        {
+            return char.IsLetterOrDigit(addedChar) ? addedChar : '\0';
         }
 
         private void OnUsernameValueChanged(string _)

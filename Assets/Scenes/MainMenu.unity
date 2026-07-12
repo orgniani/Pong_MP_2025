@@ -1022,7 +1022,7 @@ MonoBehaviour:
   m_CharacterValidation: 0
   m_RegexValue: 
   m_GlobalPointSize: 16
-  m_CharacterLimit: 16
+  m_CharacterLimit: 10
   m_OnEndEdit:
     m_PersistentCalls:
       m_Calls: []
@@ -3811,14 +3811,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   browserService: {fileID: 1420971867}
-  panelRoot: {fileID: 1586704456}
   contentRoot: {fileID: 1011397535}
   entryPrefab: {fileID: 7654118078399331369, guid: 0d67d042c7a740e4f95e4f7a84115995, type: 3}
   headerText: {fileID: 137622948}
   emptyStateText: {fileID: 419286985}
+  panelRoot: {fileID: 1586704456}
+  loadingPanel: {fileID: 1127207456}
   refreshButton: {fileID: 746421019}
   backButton: {fileID: 1164571164}
-  loadingPanel: {fileID: 1127207456}
   enableLogs: 0
 --- !u!1 &1776567368
 GameObject:
