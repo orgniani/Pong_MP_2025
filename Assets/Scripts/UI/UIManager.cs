@@ -5,8 +5,8 @@ using UnityEngine;
 using UnityEngine.UI;
 using Helpers;
 using Managers.Network;
-using Config;
 using Players;
+using Balls;
 
 namespace UI
 {
@@ -21,12 +21,13 @@ namespace UI
         [Header("Game objects")]
         [SerializeField] private GameObject countdownCanvas;
         [SerializeField] private GameObject gameOverCanvas;
+        [SerializeField] private GameObject playerDisconnectedNode;
 
         [Header("Buttons")]
         [SerializeField] private Button menuButton;
 
-        [Header("Config")]
-        [SerializeField] private MatchRulesConfig matchRulesConfig;
+        [Header("Ball")]
+        [SerializeField] private Ball ball;
 
         private TimerManager _timerManager;
         private ScoreManager _scoreManager;
@@ -39,7 +40,7 @@ namespace UI
 
         private void Awake()
         {
-            if (!ReferenceValidator.Validate(matchRulesConfig, nameof(matchRulesConfig), this)) return;
+            if (!ReferenceValidator.Validate(ball, nameof(ball), this)) return;
         }
 
         private void OnEnable()
@@ -48,6 +49,7 @@ namespace UI
 
             countdownCanvas.SetActive(false);
             gameOverCanvas.SetActive(false);
+            playerDisconnectedNode.SetActive(false);
 
             if (NetworkManager.Instance)
             {
@@ -97,6 +99,9 @@ namespace UI
             _uiScore.RefreshNames();
             _uiTimer = new UITimer(_timerManager, timerText);
 
+            while (FlowManager.Instance != null && FlowManager.Instance.IsLoading)
+                yield return null;
+
             yield return StartCoroutine(CountdownRoutine());
         }
 
@@ -121,12 +126,15 @@ namespace UI
 
         private IEnumerator CountdownRoutine()
         {
+            if (!ball.IsLaunchCountdownActive)
+                yield break;
+
             countdownCanvas.SetActive(true);
 
-            for (int remaining = Mathf.CeilToInt(matchRulesConfig.CountdownSeconds); remaining > 0; remaining--)
+            while (ball.IsLaunchCountdownActive)
             {
-                countdownText.text = remaining.ToString();
-                yield return new WaitForSeconds(1f);
+                countdownText.text = Mathf.CeilToInt(ball.LaunchCountdownRemaining).ToString();
+                yield return null;
             }
 
             countdownCanvas.SetActive(false);
@@ -139,7 +147,7 @@ namespace UI
                 return;
 
             if (!gameOverCanvas.activeSelf || string.IsNullOrWhiteSpace(finalWinnersText.text))
-                ShowGameOver(_scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty);
+                ShowGameOver(_scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty, _gameOverManager.Reason);
         }
 
         private void HandleRosterChanged()
@@ -152,14 +160,15 @@ namespace UI
             if (gameOverCanvas.activeSelf && !string.IsNullOrWhiteSpace(finalWinnersText.text))
                 return;
 
-            ShowGameOver(_scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty);
+            ShowGameOver(_scoreManager != null ? _scoreManager.GetMatchResultLabel() : string.Empty, GameOverReason.None);
         }
 
-        private void ShowGameOver(string winnersText)
+        private void ShowGameOver(string winnersText, GameOverReason reason)
         {
             CursorLocker.Unlock();
             gameOverCanvas.SetActive(true);
             finalWinnersText.text = winnersText;
+            playerDisconnectedNode.SetActive(reason == GameOverReason.PlayerDisconnected);
         }
 
         private void ReturnToMainMenu()

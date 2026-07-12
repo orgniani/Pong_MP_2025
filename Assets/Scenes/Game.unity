@@ -2917,8 +2917,9 @@ MonoBehaviour:
   finalWinnersText: {fileID: 613073757}
   countdownCanvas: {fileID: 805031749}
   gameOverCanvas: {fileID: 26908683}
+  playerDisconnectedNode: {fileID: 642166855}
   menuButton: {fileID: 894100523}
-  matchRulesConfig: {fileID: 11400000, guid: 488260269aab7e84d9bc2b0eb7f12273, type: 2}
+  ball: {fileID: 6633243777193437339}
 --- !u!1 &1423298392
 GameObject:
   m_ObjectHideFlags: 0
@@ -3669,6 +3670,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7beb98a8f3301ea4eb5478d492b026a9, type: 3}
+--- !u!114 &6633243777193437339 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8230315667300888054, guid: 7beb98a8f3301ea4eb5478d492b026a9, type: 3}
+  m_PrefabInstance: {fileID: 6633243777193437338}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6f7bfffea9d1db647a5aab29c785e3d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

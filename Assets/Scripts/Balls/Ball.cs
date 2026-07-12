@@ -28,6 +28,8 @@ namespace Balls
         [Networked] private bool _isStopped { get; set; }
 
         public PlayerRef LastHitBy => _lastHitBy;
+        public bool IsLaunchCountdownActive => _launchTimer.IsRunning;
+        public float LaunchCountdownRemaining => _launchTimer.RemainingTime(Runner) ?? 0f;
 
         private BallBounce _ballBounce;
         private BallGoal _ballGoal;
