@@ -320,8 +320,8 @@ namespace Managers
 
             ClearBallGoalCallbacks();
 
-            ball.onLeftGoal.AddListener(_scoreManager.RegisterRightGoal);
-            ball.onRightGoal.AddListener(_scoreManager.RegisterLeftGoal);
+            ball.OnLeftGoal += _scoreManager.RegisterRightGoal;
+            ball.OnRightGoal += _scoreManager.RegisterLeftGoal;
             _boundBall = ball;
         }
 
@@ -352,8 +352,8 @@ namespace Managers
         {
             if (_boundBall != null && _scoreManager != null)
             {
-                _boundBall.onLeftGoal.RemoveListener(_scoreManager.RegisterRightGoal);
-                _boundBall.onRightGoal.RemoveListener(_scoreManager.RegisterLeftGoal);
+                _boundBall.OnLeftGoal -= _scoreManager.RegisterRightGoal;
+                _boundBall.OnRightGoal -= _scoreManager.RegisterLeftGoal;
             }
 
             _boundBall = null;

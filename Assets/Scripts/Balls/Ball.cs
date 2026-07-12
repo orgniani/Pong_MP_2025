@@ -1,10 +1,10 @@
+using System;
 using Config;
 using Fusion;
 using Helpers;
 using Players;
 using PowerUps;
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Balls
 {
@@ -19,9 +19,8 @@ namespace Balls
         [SerializeField] private float leftBoundX = -9f;
         [SerializeField] private float rightBoundX = 9f;
 
-        [Header("Events")]
-        public UnityEvent onLeftGoal;
-        public UnityEvent onRightGoal;
+        public event Action OnLeftGoal;
+        public event Action OnRightGoal;
 
         [Networked] private PlayerRef _lastHitBy { get; set; }
         [Networked] private NetworkRNG _rng { get; set; }
@@ -87,12 +86,12 @@ namespace Balls
             var result = _ballGoal.Tick();
             if (result == GoalResult.LeftGoal)
             {
-                onLeftGoal?.Invoke();
+                OnLeftGoal?.Invoke();
                 ResetBall();
             }
             else if (result == GoalResult.RightGoal)
             {
-                onRightGoal?.Invoke();
+                OnRightGoal?.Invoke();
                 ResetBall();
             }
         }
