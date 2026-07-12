@@ -1,6 +1,7 @@
 using System.Linq;
 using Config;
 using Fusion;
+using Helpers;
 using UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -122,17 +123,11 @@ namespace Managers.Network
                 return false;
             }
 
-            if (waitingRoom == null)
-            {
-                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because UIWaitingRoom is not assigned. Wire the waiting room through the Lobby scene composition root.", this);
-                return false;
-            }
+            var hasRequiredReferences = ReferenceValidator.Validate(waitingRoom, nameof(waitingRoom), this)
+                & ReferenceValidator.Validate(paddleColorPalette, nameof(paddleColorPalette), this);
 
-            if (paddleColorPalette == null)
-            {
-                Debug.LogError("[LobbySceneCompositionRoot] Compose failed because PaddleColorPalette is not assigned. The Lobby scene composition root is the single scene owner and must inject the palette into UIWaitingRoom and LobbySessionState.", this);
+            if (!hasRequiredReferences)
                 return false;
-            }
 
             if (runner.IsServer && !lobbyRosterStatePrefab.IsValid)
             {

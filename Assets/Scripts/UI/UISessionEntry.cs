@@ -1,5 +1,6 @@
 using System;
 using Fusion;
+using Helpers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,6 +16,14 @@ namespace UI
 
         private string _sessionName;
         private Action<string> _onJoin;
+
+        private void Awake()
+        {
+            ReferenceValidator.ValidateOptional(sessionNameText, nameof(sessionNameText), this);
+            ReferenceValidator.ValidateOptional(modeText, nameof(modeText), this);
+            ReferenceValidator.ValidateOptional(occupancyText, nameof(occupancyText), this);
+            ReferenceValidator.ValidateOptional(joinButton, nameof(joinButton), this);
+        }
 
         public void Bind(SessionInfo info, UIGameModeFilter mode, Action<string> onJoin)
         {

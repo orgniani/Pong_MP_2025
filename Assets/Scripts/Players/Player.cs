@@ -1,6 +1,7 @@
 using System;
 using Config;
 using Fusion;
+using Helpers;
 using Managers;
 using UnityEngine;
 
@@ -62,6 +63,8 @@ namespace Players
         private void Awake()
         {
             _capsuleCollider = GetComponent<CapsuleCollider2D>();
+            ReferenceValidator.ValidateOptional(paddleColorPalette, nameof(paddleColorPalette), this);
+            ReferenceValidator.ValidateOptional(viewRenderer, nameof(viewRenderer), this);
         }
 
         public override void Spawned()

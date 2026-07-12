@@ -1,3 +1,4 @@
+using Helpers;
 using Managers.Network;
 using System;
 using System.Collections.Generic;
@@ -39,6 +40,16 @@ namespace UI
         }
 
         public UIViewData CurrentViewData { get; private set; } = EmptyViewData;
+
+        private void Awake()
+        {
+            ReferenceValidator.ValidateOptional(playerEntryLocalPrefab, nameof(playerEntryLocalPrefab), this);
+            ReferenceValidator.ValidateOptional(playerEntryDisplayPrefab, nameof(playerEntryDisplayPrefab), this);
+            ReferenceValidator.ValidateOptional(leftTeamParent, nameof(leftTeamParent), this);
+            ReferenceValidator.ValidateOptional(rightTeamParent, nameof(rightTeamParent), this);
+            ReferenceValidator.ValidateOptional(waitingStatusText, nameof(waitingStatusText), this);
+            ReferenceValidator.ValidateOptional(leaveButton, nameof(leaveButton), this);
+        }
 
         private void OnEnable()
         {

@@ -18,6 +18,11 @@ namespace Boot
 
         private const string SessionPrefix = "PongServer";
 
+        private void Awake()
+        {
+            ReferenceValidator.ValidateOptional(matchRulesConfig, nameof(matchRulesConfig), this);
+        }
+
         private async void Start()
         {
             if (!ShouldStartDedicatedServer())

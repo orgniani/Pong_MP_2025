@@ -39,11 +39,7 @@ namespace UI
 
         private void Awake()
         {
-            if (!matchRulesConfig)
-            {
-                Debug.LogError("[UIManager] MatchRulesConfig is missing.", this);
-                enabled = false;
-            }
+            if (!ReferenceValidator.Validate(matchRulesConfig, nameof(matchRulesConfig), this)) return;
         }
 
         private void OnEnable()

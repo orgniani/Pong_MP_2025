@@ -1,4 +1,5 @@
 using Fusion;
+using Helpers;
 using UnityEngine;
 
 namespace PowerUps
@@ -13,6 +14,18 @@ namespace PowerUps
         [Networked] private NetworkRNG _rng { get; set; }
         [Networked] private NetworkBehaviourId _activePowerUp { get; set; }
         [Networked] private int _lastSpawnIndex { get; set; }
+
+        private void Awake()
+        {
+            if (!ReferenceValidator.Validate(powerUpPrefab, nameof(powerUpPrefab), this))
+                return;
+
+            if (spawnPoints != null)
+            {
+                for (int i = 0; i < spawnPoints.Length; i++)
+                    ReferenceValidator.ValidateOptional(spawnPoints[i], $"spawnPoints[{i}]", this);
+            }
+        }
 
         public override void Spawned()
         {

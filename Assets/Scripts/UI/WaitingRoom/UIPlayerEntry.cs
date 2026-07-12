@@ -1,3 +1,4 @@
+using Helpers;
 using UnityEngine;
 
 namespace UI
@@ -9,6 +10,11 @@ namespace UI
 
         protected UIWaitingRoom waitingRoom { get; private set; }
         protected int playerId { get; private set; } = -1;
+
+        protected virtual void Awake()
+        {
+            ReferenceValidator.ValidateOptional(playerNameText, nameof(playerNameText), this);
+        }
 
         public void Bind(UIWaitingRoom waitingRoom, UIViewData.PlayerRowViewData row, string readyLabel, string readyLockedLabel)
         {

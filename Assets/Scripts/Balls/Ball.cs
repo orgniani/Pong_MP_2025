@@ -1,5 +1,6 @@
 using Config;
 using Fusion;
+using Helpers;
 using Players;
 using PowerUps;
 using UnityEngine;
@@ -45,11 +46,7 @@ namespace Balls
             _ballGoal.Initialize(_rb, leftBoundX, rightBoundX);
             _ballSpeed.Initialize(_rb, startingSpeed, speedIncreasePerSecond);
 
-            if (!matchRulesConfig)
-            {
-                Debug.LogError("[Ball] MatchRulesConfig is missing.", this);
-                enabled = false;
-            }
+            if (!ReferenceValidator.Validate(matchRulesConfig, nameof(matchRulesConfig), this)) return;
         }
 
         public override void Spawned()

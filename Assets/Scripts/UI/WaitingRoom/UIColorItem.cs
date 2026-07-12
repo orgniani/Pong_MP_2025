@@ -1,4 +1,5 @@
 using System;
+using Helpers;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,6 +16,14 @@ namespace UI
         private Action<int> _selectionRequested;
         private int _colorId = -1;
         private bool _isSelected;
+
+        private void Awake()
+        {
+            ReferenceValidator.ValidateOptional(swatchGraphic, nameof(swatchGraphic), this);
+            ReferenceValidator.ValidateOptional(selectedCheckmark, nameof(selectedCheckmark), this);
+            ReferenceValidator.ValidateOptional(blockedCross, nameof(blockedCross), this);
+            ReferenceValidator.ValidateOptional(optionToggle, nameof(optionToggle), this);
+        }
 
         private void OnDisable()
         {

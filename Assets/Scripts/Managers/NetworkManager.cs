@@ -53,6 +53,10 @@ namespace Managers
 
         private void Awake()
         {
+            ReferenceValidator.ValidateOptional(matchRulesConfig, nameof(matchRulesConfig), this);
+            ReferenceValidator.ValidateOptional(oneVsOneSpawnPoints, nameof(oneVsOneSpawnPoints), this);
+            ReferenceValidator.ValidateOptional(twoVsTwoSpawnPoints, nameof(twoVsTwoSpawnPoints), this);
+
             var runner = FindFirstObjectByType<NetworkRunner>();
             if (runner == null)
                 return;

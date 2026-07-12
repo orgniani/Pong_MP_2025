@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Fusion;
+using Helpers;
 using Managers.Network;
 using TMPro;
 using UnityEngine;
@@ -181,13 +182,16 @@ namespace UI
 
         private bool ValidateReferences()
         {
-            var ok = true;
+            var ok = ReferenceValidator.Validate(browserService, nameof(browserService), this)
+                    & ReferenceValidator.Validate(contentRoot, nameof(contentRoot), this)
+                    & ReferenceValidator.Validate(entryPrefab, nameof(entryPrefab), this)
+                    & ReferenceValidator.Validate(refreshButton, nameof(refreshButton), this)
+                    & ReferenceValidator.Validate(backButton, nameof(backButton), this);
 
-            if (browserService == null) { Debug.LogError("[UISessionBrowser] browserService is not assigned.", this); ok = false; }
-            if (contentRoot == null) { Debug.LogError("[UISessionBrowser] contentRoot is not assigned.", this); ok = false; }
-            if (entryPrefab == null) { Debug.LogError("[UISessionBrowser] entryPrefab is not assigned.", this); ok = false; }
-            if (refreshButton == null) { Debug.LogError("[UISessionBrowser] refreshButton is not assigned.", this); ok = false; }
-            if (backButton == null) { Debug.LogError("[UISessionBrowser] backButton is not assigned.", this); ok = false; }
+            ReferenceValidator.ValidateOptional(panelRoot, nameof(panelRoot), this);
+            ReferenceValidator.ValidateOptional(headerText, nameof(headerText), this);
+            ReferenceValidator.ValidateOptional(emptyStateText, nameof(emptyStateText), this);
+            ReferenceValidator.ValidateOptional(loadingPanel, nameof(loadingPanel), this);
 
             return ok;
         }
