@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Common;
 using Fusion;
 using Helpers;
 using Managers.Network;
@@ -34,7 +35,7 @@ namespace UI
         [SerializeField] private bool enableLogs = false;
 
         private readonly List<UISessionEntry> _spawnedEntries = new List<UISessionEntry>();
-        private UIGameModeFilter _mode;
+        private MatchMode _mode;
         private bool _subscribed;
 
         private void Awake()
@@ -51,14 +52,14 @@ namespace UI
             if (panelRoot != null) panelRoot.SetActive(false);
         }
 
-        public void Open(UIGameModeFilter mode)
+        public void Open(MatchMode mode)
         {
             _mode = mode;
 
             if (panelRoot != null) panelRoot.SetActive(true);
             if (headerText != null)
             {
-                headerText.text = _mode == UIGameModeFilter.OneVsOne
+                headerText.text = _mode == MatchMode.OneVsOne
                     ? "Available 1 vs 1 matches"
                     : "Available 2 vs 2 matches";
             }

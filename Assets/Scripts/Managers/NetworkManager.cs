@@ -10,7 +10,6 @@ using System.Linq;
 using Balls;
 using Helpers;
 using UnityEngine.SceneManagement;
-using UI;
 
 namespace Managers
 {
@@ -54,6 +53,8 @@ namespace Managers
         private void Awake()
         {
             ReferenceValidator.ValidateOptional(matchRulesConfig, nameof(matchRulesConfig), this);
+            if (matchRulesConfig != null)
+                MatchRulesRegistry.RegisterProvider(new MatchRulesProvider(matchRulesConfig), this);
             ReferenceValidator.ValidateOptional(oneVsOneSpawnPoints, nameof(oneVsOneSpawnPoints), this);
             ReferenceValidator.ValidateOptional(twoVsTwoSpawnPoints, nameof(twoVsTwoSpawnPoints), this);
 
@@ -128,7 +129,7 @@ namespace Managers
             if (playerSlotIndex < 0)
                 return false;
 
-            var mode = TeamLaneAssignmentUtility.ResolveMode(UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers));
+            var mode = TeamLaneAssignmentUtility.ResolveMode(MatchModeExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers));
             var assignment = TeamLaneAssignmentUtility.ResolveAssignment(mode, playerSlotIndex);
             var layoutIndex = TeamLaneAssignmentUtility.ResolveSpawnLayoutIndex(mode, assignment.TeamId, assignment.LaneId);
             if (layoutIndex < 0)
@@ -212,7 +213,7 @@ namespace Managers
                 }
                 else if (matchSessionState != null && !matchSessionState.MatchInProgress
                          && !matchSessionState.IsPostGameCleanup
-                         && runner.ActivePlayers.Count() < ResolveMinPlayersToStart())
+                         && runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner))
                 {
                     matchSessionState.RearmAutoStart();
                 }
@@ -270,7 +271,7 @@ namespace Managers
                 PrepareForLobbyState();
 
                 if (matchSessionState != null && !matchSessionState.IsPostGameCleanup
-                    && runner.ActivePlayers.Count() < ResolveMinPlayersToStart())
+                    && runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner))
                     matchSessionState?.RearmAutoStart();
 
                 return;
@@ -408,21 +409,16 @@ namespace Managers
             runner.LoadScene(SceneRef.FromIndex(lobbySceneIndex));
         }
 
-        private int ResolveMinPlayersToStart()
-        {
-            return matchRulesConfig != null ? matchRulesConfig.ResolveMinPlayersToStart() : 1;
-        }
-
         private static int ResolveRequiredPlayersForActiveMode(NetworkRunner runner)
         {
             if (runner == null)
                 return 1;
 
-            var requiredPlayers = UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
+            var requiredPlayers = MatchModeExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
             return Mathf.Max(1, requiredPlayers);
         }
 
-        private bool TryGetSpawnPoint(UIGameModeFilter mode, int index, out Transform spawnPoint)
+        private bool TryGetSpawnPoint(MatchMode mode, int index, out Transform spawnPoint)
         {
             spawnPoint = null;
 
@@ -435,10 +431,10 @@ namespace Managers
             return spawnPoint != null;
         }
 
-        private Transform[] ResolveSpawnPointLayout(UIGameModeFilter mode)
+        private Transform[] ResolveSpawnPointLayout(MatchMode mode)
         {
-            if (mode == UIGameModeFilter.TwoVsTwo)
-                return twoVsTwoSpawnPoints != null && twoVsTwoSpawnPoints.Length >= UIGameModeFilterExtensions.TwoVsTwoMaxPlayers
+            if (mode == MatchMode.TwoVsTwo)
+                return twoVsTwoSpawnPoints != null && twoVsTwoSpawnPoints.Length >= MatchModeExtensions.TwoVsTwoMaxPlayers
                     ? twoVsTwoSpawnPoints
                     : null;
 
@@ -452,11 +448,11 @@ namespace Managers
             if (runner == null || !IsGameSceneActive())
                 return;
 
-            var mode = TeamLaneAssignmentUtility.ResolveMode(UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers));
+            var mode = TeamLaneAssignmentUtility.ResolveMode(MatchModeExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers));
             ApplyLaneVisibility(mode);
         }
 
-        private void ApplyLaneVisibility(UIGameModeFilter mode)
+        private void ApplyLaneVisibility(MatchMode mode)
         {
             var activeLayout = ResolveSpawnPointLayout(mode);
             if (activeLayout == null || activeLayout.Length == 0)
@@ -498,14 +494,14 @@ namespace Managers
             }
         }
 
-        private UIGameModeFilter ResolveCurrentMode()
+        private MatchMode ResolveCurrentMode()
         {
             if (_networkRunner != null)
-                return TeamLaneAssignmentUtility.ResolveMode(UIGameModeFilterExtensions.ToGamePlayerCount(_networkRunner.SessionInfo.MaxPlayers));
+                return TeamLaneAssignmentUtility.ResolveMode(MatchModeExtensions.ToGamePlayerCount(_networkRunner.SessionInfo.MaxPlayers));
 
-            return twoVsTwoSpawnPoints != null && twoVsTwoSpawnPoints.Length >= UIGameModeFilterExtensions.TwoVsTwoMaxPlayers
-                ? UIGameModeFilter.TwoVsTwo
-                : UIGameModeFilter.OneVsOne;
+            return twoVsTwoSpawnPoints != null && twoVsTwoSpawnPoints.Length >= MatchModeExtensions.TwoVsTwoMaxPlayers
+                ? MatchMode.TwoVsTwo
+                : MatchMode.OneVsOne;
         }
 
         private void Log(string message)

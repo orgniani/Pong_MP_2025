@@ -1,15 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Common;
 using Fusion;
-using UI;
 using UnityEngine;
 
 namespace Managers.Network
 {
     public sealed class LobbyRosterState : NetworkBehaviour
     {
-        public const int MaxRosterSize = UIGameModeFilterExtensions.TwoVsTwoMaxPlayers;
+        public const int MaxRosterSize = MatchModeExtensions.TwoVsTwoMaxPlayers;
 
         [Networked, Capacity(MaxRosterSize)]
         private NetworkArray<NetworkString<_16>> Usernames => default;

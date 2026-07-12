@@ -1,4 +1,5 @@
 using System;
+using Common;
 
 namespace Managers.Network
 {
@@ -36,14 +37,14 @@ namespace Managers.Network
             new TeamLaneAssignment((int)TeamSide.Right, 1)
         };
 
-        public static UI.UIGameModeFilter ResolveMode(int targetPlayerCapacity)
+        public static MatchMode ResolveMode(int targetPlayerCapacity)
         {
-            return targetPlayerCapacity >= UI.UIGameModeFilterExtensions.TwoVsTwoMaxPlayers
-                ? UI.UIGameModeFilter.TwoVsTwo
-                : UI.UIGameModeFilter.OneVsOne;
+            return targetPlayerCapacity >= MatchModeExtensions.TwoVsTwoMaxPlayers
+                ? MatchMode.TwoVsTwo
+                : MatchMode.OneVsOne;
         }
 
-        public static TeamLaneAssignment ResolveAssignment(UI.UIGameModeFilter mode, int slotIndex)
+        public static TeamLaneAssignment ResolveAssignment(MatchMode mode, int slotIndex)
         {
             var assignments = GetAssignments(mode);
             if (assignments.Length == 0)
@@ -58,7 +59,7 @@ namespace Managers.Network
             return assignments[normalizedIndex];
         }
 
-        public static int ResolveSpawnLayoutIndex(UI.UIGameModeFilter mode, int teamId, int laneId)
+        public static int ResolveSpawnLayoutIndex(MatchMode mode, int teamId, int laneId)
         {
             var assignments = GetAssignments(mode);
             for (var i = 0; i < assignments.Length; i++)
@@ -80,9 +81,9 @@ namespace Managers.Network
             return teamId == (int)TeamSide.Right ? "Right" : "Left";
         }
 
-        private static TeamLaneAssignment[] GetAssignments(UI.UIGameModeFilter mode)
+        private static TeamLaneAssignment[] GetAssignments(MatchMode mode)
         {
-            return mode == UI.UIGameModeFilter.TwoVsTwo ? TwoVsTwoAssignments : OneVsOneAssignments;
+            return mode == MatchMode.TwoVsTwo ? TwoVsTwoAssignments : OneVsOneAssignments;
         }
     }
 

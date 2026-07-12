@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Common;
 using Config;
 using Fusion;
-using UI;
 using UnityEngine;
 
 namespace Managers.Network
@@ -464,7 +464,7 @@ namespace Managers.Network
             if (runner == null)
                 return 0;
 
-            return UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
+            return MatchModeExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
         }
 
         private static string ResolveUsernameFromToken(byte[] token, PlayerRef player)

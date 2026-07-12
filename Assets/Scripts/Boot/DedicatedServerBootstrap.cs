@@ -1,6 +1,7 @@
 using Fusion;
 using System;
 using System.Threading.Tasks;
+using Common;
 using Config;
 using Helpers;
 using Managers.Network;
@@ -21,6 +22,8 @@ namespace Boot
         private void Awake()
         {
             ReferenceValidator.ValidateOptional(matchRulesConfig, nameof(matchRulesConfig), this);
+            if (matchRulesConfig != null)
+                MatchRulesRegistry.RegisterProvider(new MatchRulesProvider(matchRulesConfig), this);
         }
 
         private async void Start()
@@ -32,8 +35,6 @@ namespace Boot
             }
 
             var options = BuildServerOptions();
-            if (options == null)
-                return;
 
             var lobbySceneIndex = SceneCatalog.GetLobbyIndex();
             if (lobbySceneIndex < 0)
@@ -60,7 +61,7 @@ namespace Boot
             LobbyRunnerCallbacks.EnsureOnRunner(runner);
 
             var shutdownTcs = new TaskCompletionSource<ShutdownReason>();
-            runner.AddCallbacks(new DedicatedServerMatchFlow(matchRulesConfig, shutdownTcs));
+            runner.AddCallbacks(new DedicatedServerMatchFlow(shutdownTcs));
 
             var sessionHandler = new NetworkSessionHandler();
             var ok = await sessionHandler.StartServer(runner, options.MaxPlayers, lobbySceneIndex, options.SessionName, options.Region, options.Port);
@@ -90,35 +91,23 @@ namespace Boot
                 sessionName = fallbackSessionName;
             }
 
-            var resolvedMaxPlayers = ResolveMaxPlayers(maxPlayersFromArgs);
-            if (!resolvedMaxPlayers.HasValue)
-            {
-                Debug.LogError("[DedicatedServerBootstrap] MatchRulesConfig is missing and no '-maxPlayers' override was provided.");
-                return null;
-            }
-
             return new DedicatedServerOptions
             {
                 SessionName = sessionName,
                 Region = region,
                 Port = port,
-                MaxPlayers = resolvedMaxPlayers.Value
+                MaxPlayers = ResolveMaxPlayers(maxPlayersFromArgs)
             };
         }
 
-        private int? ResolveMaxPlayers(int? maxPlayersFromArgs)
+        private static int ResolveMaxPlayers(int? maxPlayersFromArgs)
         {
             if (maxPlayersFromArgs.HasValue)
             {
                 return Mathf.Max(1, maxPlayersFromArgs.Value);
             }
 
-            if (matchRulesConfig == null)
-            {
-                return null;
-            }
-
-            return matchRulesConfig.ResolveMaxPlayers();
+            return MatchModeExtensions.TwoVsTwoMaxPlayers + MatchRules.GetDedicatedServerSlots();
         }
 
         private bool ShouldStartDedicatedServer()

@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Common;
 using Config;
 using Fusion;
 using Fusion.Sockets;
-using UI;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -14,16 +14,13 @@ namespace Managers.Network
     public sealed class DedicatedServerMatchFlow : INetworkRunnerCallbacks
     {
         private static readonly Dictionary<NetworkRunner, DedicatedServerMatchFlow> ActiveFlows = new();
-        private readonly MatchRulesConfig _matchRulesConfig;
         private readonly TaskCompletionSource<ShutdownReason> _shutdownTcs;
         private readonly LobbyAutoStartCoordinator _lobbyAutoStartCoordinator;
 
         public DedicatedServerMatchFlow(
-            MatchRulesConfig matchRulesConfig,
             TaskCompletionSource<ShutdownReason> shutdownTcs = null,
             LobbyAutoStartCoordinator lobbyAutoStartCoordinator = null)
         {
-            _matchRulesConfig = matchRulesConfig;
             _shutdownTcs = shutdownTcs;
             _lobbyAutoStartCoordinator = lobbyAutoStartCoordinator ?? new LobbyAutoStartCoordinator();
         }
@@ -84,7 +81,7 @@ namespace Managers.Network
             if (runner == null)
                 return -1;
 
-            var requiredPlayers = UIGameModeFilterExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
+            var requiredPlayers = MatchModeExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
             return Math.Max(1, requiredPlayers);
         }
 

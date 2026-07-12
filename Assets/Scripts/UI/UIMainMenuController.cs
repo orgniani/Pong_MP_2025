@@ -1,3 +1,4 @@
+using Common;
 using Helpers;
 using TMPro;
 using UnityEngine;
@@ -60,12 +61,12 @@ namespace UI
 
         private void OnPlay1v1Clicked()
         {
-            TryOpenSessionBrowser(UIGameModeFilter.OneVsOne);
+            TryOpenSessionBrowser(MatchMode.OneVsOne);
         }
 
         private void OnPlay2v2Clicked()
         {
-            TryOpenSessionBrowser(UIGameModeFilter.TwoVsTwo);
+            TryOpenSessionBrowser(MatchMode.TwoVsTwo);
         }
 
         private void OnUsernameValueChanged(string _)
@@ -113,7 +114,7 @@ namespace UI
             return ok;
         }
 
-        private void TryOpenSessionBrowser(UIGameModeFilter gameModeFilter)
+        private void TryOpenSessionBrowser(MatchMode gameModeFilter)
         {
             if (string.IsNullOrWhiteSpace(Username))
             {

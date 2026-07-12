@@ -1,4 +1,5 @@
 using System;
+using Common;
 using Fusion;
 using Helpers;
 using TMPro;
@@ -28,12 +29,12 @@ namespace UI
             ReferenceValidator.ValidateOptional(joinButton, nameof(joinButton), this);
         }
 
-        public void Bind(SessionInfo info, UIGameModeFilter mode, Action<string> onJoin)
+        public void Bind(SessionInfo info, MatchMode mode, Action<string> onJoin)
         {
             _sessionName = info.Name;
             _onJoin = onJoin;
 
-            var gamePlayers = UIGameModeFilterExtensions.ToGamePlayerCount(info.PlayerCount);
+            var gamePlayers = MatchModeExtensions.ToGamePlayerCount(info.PlayerCount);
             var gameCapacity = mode.ToMaxPlayers();
 
             if (sessionNameText != null) sessionNameText.text = info.Name;
