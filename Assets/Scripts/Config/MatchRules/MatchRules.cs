@@ -5,6 +5,7 @@ namespace Config
     public static class MatchRules
     {
         private const int FallbackDedicatedServerSlots = 1;
+        private const float FallbackCountdownSeconds = 3f;
         private const float FallbackMatchDurationSeconds = 120f;
 
         public static int GetDedicatedServerSlots()
@@ -27,6 +28,17 @@ namespace Config
             }
 
             return config.MatchDurationSeconds;
+        }
+
+        public static float GetCountdownSeconds()
+        {
+            if (!MatchRulesRegistry.TryGetConfig(out var config) || config == null)
+            {
+                Debug.LogError("[MatchRules] MatchRulesRegistry is not initialized. Using fallback countdown. Add matchRulesConfig registration in startup flow.");
+                return FallbackCountdownSeconds;
+            }
+
+            return config.CountdownSeconds;
         }
 
         public static int ToGamePlayerCount(int sessionPlayerCount)

@@ -49,7 +49,7 @@ namespace Managers
 
         private IEnumerator CountdownCoroutine()
         {
-            yield return new WaitForSeconds(3f);
+            yield return new WaitForSeconds(MatchRules.GetCountdownSeconds());
             _timerRunning = true;
             _countdownCoroutine = null;
         }

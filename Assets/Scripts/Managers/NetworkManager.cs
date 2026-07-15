@@ -35,11 +35,8 @@ namespace Managers
         private TimerManager _timerManager;
         private GameOverManager _gameOverManager;
         
-        private readonly Dictionary<PlayerRef, NetworkObject> _spawnedPlayers = new Dictionary<PlayerRef, NetworkObject>();
-
         private NetworkRunner _networkRunner;
         private NetworkPlayerSpawner _playerSpawner;
-        private NetworkInputHandler _inputHandler;
         private Ball _boundBall;
 
         public event Action OnConnected;
@@ -157,9 +154,6 @@ namespace Managers
         {
             if (shutdownReason == ShutdownReason.GameNotFound)
                 return;
-
-            if (_networkRunner != null && _networkRunner.IsServer)
-                _spawnedPlayers.Clear();
 
             _networkRunner = null;
 
