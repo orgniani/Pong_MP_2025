@@ -13,7 +13,6 @@ namespace Managers.Network
     {
         private const string UsernameTokenPrefix = "lobby-username:";
         private const string FallbackUsername = "Player";
-        private static readonly LobbySessionSnapshot EmptySnapshot = new(Array.Empty<string>(), Array.Empty<int>(), Array.Empty<bool>(), Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>(), -1, false, 0, 0);
         private static LobbySessionState _activeInstance;
         private static int _activationSequence;
         private NetworkRunner _runner;
@@ -30,7 +29,7 @@ namespace Managers.Network
         public static LobbySessionState ActiveInstance => ResolvePreferredInstance();
 
         public LobbySessionSnapshot CurrentSnapshot =>
-            _rosterState != null ? _rosterState.BuildSnapshot() : EmptySnapshot;
+            _rosterState != null ? _rosterState.BuildSnapshot() : LobbySessionSnapshot.Empty;
 
         public NetworkRunner Runner => _runner != null ? _runner : (_runner = GetComponent<NetworkRunner>());
 
@@ -167,10 +166,10 @@ namespace Managers.Network
             var rosterState = _rosterState;
             UnbindRosterState();
 
-            SnapshotChanged?.Invoke(EmptySnapshot);
+            SnapshotChanged?.Invoke(LobbySessionSnapshot.Empty);
 
             if (_runner != null && _runner.IsServer)
-                rosterState?.SetRoster(Array.Empty<string>(), Array.Empty<int>(), Array.Empty<bool>(), Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>(), 0, 0);
+                rosterState?.SetRoster(LobbyRosterData.Empty);
         }
 
         public void RequestLocalPlayerReadyLock()
@@ -371,7 +370,15 @@ namespace Managers.Network
                 .Select(entry => _colorIds.TryGetValue(entry.Key, out var colorId) ? colorId : -1)
                 .ToArray();
 
-            _rosterState.SetRoster(orderedUsernames, orderedPlayerIds, orderedReadyStates, orderedTeamIds, orderedLaneIds, orderedColorIds, runner.ActivePlayers.Count(), targetPlayerCapacity);
+            _rosterState.SetRoster(new LobbyRosterData(
+                usernames: orderedUsernames,
+                playerIds: orderedPlayerIds,
+                readyStates: orderedReadyStates,
+                teamIds: orderedTeamIds,
+                laneIds: orderedLaneIds,
+                colorIds: orderedColorIds,
+                currentPlayerCount: runner.ActivePlayers.Count(),
+                targetPlayerCapacity: targetPlayerCapacity));
         }
 
         private void SynchronizeColorAssignments(NetworkRunner runner)

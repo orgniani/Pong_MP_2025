@@ -172,7 +172,7 @@ namespace UI
                 if (colorItem == null)
                     continue;
 
-                colorItem.Bind(_colorOptions[itemIndex], _colorOptions[itemIndex].colorId == _selectedColorId, _selectionRequested);
+                colorItem.Bind(_colorOptions[itemIndex], _colorOptions[itemIndex].ColorId == _selectedColorId, _selectionRequested);
                 itemIndex++;
             }
         }

@@ -15,10 +15,10 @@ namespace UI
         protected override void BindRow(UIViewData.PlayerRowViewData row, string readyLabel, string readyLockedLabel)
         {
             if (selectedColorImage != null)
-                selectedColorImage.color = row.displayColor;
+                selectedColorImage.color = row.DisplayColor;
 
             if (readyStateText != null)
-                readyStateText.text = row.isReady ? readyLockedLabel : readyLabel;
+                readyStateText.text = row.IsReady ? readyLockedLabel : readyLabel;
         }
     }
 }

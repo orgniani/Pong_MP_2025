@@ -40,19 +40,19 @@ namespace UI
 
         protected override void BindRow(UIViewData.PlayerRowViewData row, string readyLabel, string readyLockedLabel)
         {
-            _selectedColorId = row.colorId;
-            _selectedDisplayColor = row.displayColor;
+            _selectedColorId = row.ColorId;
+            _selectedDisplayColor = row.DisplayColor;
 
             if (readyButton != null)
-                readyButton.interactable = row.canUseReadyAction;
+                readyButton.interactable = row.CanUseReadyAction;
 
             if (readyButtonText != null)
-                readyButtonText.text = row.isReady ? readyLockedLabel : readyLabel;
+                readyButtonText.text = row.IsReady ? readyLockedLabel : readyLabel;
 
             if (colorDropdown != null)
             {
                 colorDropdown.BindOptions(_colorOptions, _selectedColorId, _selectedDisplayColor, HandleColorSelected);
-                colorDropdown.interactable = row.canUseColorAction;
+                colorDropdown.interactable = row.CanUseColorAction;
                 colorDropdown.RefreshVisibility();
             }
         }

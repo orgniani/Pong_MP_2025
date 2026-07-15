@@ -37,24 +37,24 @@ namespace UI
 
         public void Bind(UIViewData.ColorOptionViewData option, bool isSelected, Action<int> selectionRequested)
         {
-            _colorId = option.colorId;
+            _colorId = option.ColorId;
             _isSelected = isSelected;
             _selectionRequested = selectionRequested;
 
             if (swatchGraphic != null)
-                swatchGraphic.color = option.displayColor;
+                swatchGraphic.color = option.DisplayColor;
 
             if (selectedCheckmark != null)
                 selectedCheckmark.SetActive(_isSelected);
 
             if (blockedCross != null)
-                blockedCross.SetActive(option.isClaimed && !_isSelected);
+                blockedCross.SetActive(option.IsClaimed && !_isSelected);
 
             if (optionToggle != null)
             {
                 optionToggle.onValueChanged.RemoveListener(HandleToggleValueChanged);
                 optionToggle.SetIsOnWithoutNotify(_isSelected);
-                optionToggle.interactable = option.isAvailableForLocalPlayer;
+                optionToggle.interactable = option.IsAvailableForLocalPlayer;
                 optionToggle.onValueChanged.AddListener(HandleToggleValueChanged);
             }
         }

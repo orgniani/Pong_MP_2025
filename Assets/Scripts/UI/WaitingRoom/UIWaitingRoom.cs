@@ -77,7 +77,7 @@ namespace UI
         {
             if (ReferenceEquals(_lobbySessionState, lobbySessionState))
             {
-                RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : CreateEmptySnapshot());
+                RefreshView(ResolveCurrentSnapshot());
                 return;
             }
 
@@ -91,13 +91,13 @@ namespace UI
                 return;
             }
 
-            RefreshView(CreateEmptySnapshot());
+            RefreshView(LobbySessionSnapshot.Empty);
         }
 
         public void Configure(PaddleColorPalette paddleColorPalette)
         {
             _paddleColorPalette = paddleColorPalette;
-            RefreshView(_lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : CreateEmptySnapshot());
+            RefreshView(ResolveCurrentSnapshot());
         }
 
         public void Unbind()
@@ -106,7 +106,7 @@ namespace UI
                 _lobbySessionState.SnapshotChanged -= RefreshView;
 
             _lobbySessionState = null;
-            RefreshView(CreateEmptySnapshot());
+            RefreshView(LobbySessionSnapshot.Empty);
         }
 
         private void RefreshView(LobbySessionSnapshot snapshot)
@@ -130,9 +130,9 @@ namespace UI
             SessionExitToMainMenu.Execute("[UIWaitingRoom]");
         }
 
-        private static LobbySessionSnapshot CreateEmptySnapshot()
+        private LobbySessionSnapshot ResolveCurrentSnapshot()
         {
-            return new LobbySessionSnapshot(Array.Empty<string>(), Array.Empty<int>(), Array.Empty<bool>(), Array.Empty<int>(), Array.Empty<int>(), Array.Empty<int>(), -1, false, 0, 0);
+            return _lobbySessionState != null ? _lobbySessionState.CurrentSnapshot : LobbySessionSnapshot.Empty;
         }
 
         public bool TryRequestReadyForPlayer(int playerId)
@@ -141,7 +141,7 @@ namespace UI
                 return false;
 
             var localRow = CurrentViewData.LocalPlayerRow;
-            if (!localRow.hasValue || localRow.playerId != playerId || !localRow.canUseReadyAction)
+            if (!localRow.HasValue || localRow.PlayerId != playerId || !localRow.CanUseReadyAction)
                 return false;
 
             _lobbySessionState.RequestLocalPlayerReadyLock();
@@ -154,13 +154,13 @@ namespace UI
                 return false;
 
             var localRow = CurrentViewData.LocalPlayerRow;
-            if (!localRow.hasValue || !localRow.canUseColorAction)
+            if (!localRow.HasValue || !localRow.CanUseColorAction)
                 return false;
 
-            if (localRow.colorId == colorId)
+            if (localRow.ColorId == colorId)
                 return false;
 
-            if (!CurrentViewData.TryGetColorOption(colorId, out var option) || !option.isAvailableForLocalPlayer)
+            if (!CurrentViewData.TryGetColorOption(colorId, out var option) || !option.IsAvailableForLocalPlayer)
                 return false;
 
             _lobbySessionState.RequestLocalPlayerColorChange(colorId);
@@ -174,7 +174,7 @@ namespace UI
 
         private UIViewData BuildViewData(LobbySessionSnapshot snapshot)
         {
-            var rowCount = snapshot.WaitingUsernames != null ? snapshot.WaitingUsernames.Length : 0;
+            var rowCount = snapshot.PlayerCount;
             var allRows = new UIViewData.PlayerRowViewData[rowCount];
             var leftRows = new List<UIViewData.PlayerRowViewData>(rowCount);
             var rightRows = new List<UIViewData.PlayerRowViewData>(rowCount);
@@ -184,41 +184,44 @@ namespace UI
 
             for (var i = 0; i < rowCount; i++)
             {
-                var playerId = snapshot.PlayerIds != null && i < snapshot.PlayerIds.Length ? snapshot.PlayerIds[i] : -1;
-                var username = snapshot.WaitingUsernames[i] ?? string.Empty;
-                var isReady = snapshot.ReadyStates != null && i < snapshot.ReadyStates.Length && snapshot.ReadyStates[i];
-                var teamId = snapshot.TeamIds != null && i < snapshot.TeamIds.Length ? snapshot.TeamIds[i] : 0;
-                var laneId = snapshot.LaneIds != null && i < snapshot.LaneIds.Length ? snapshot.LaneIds[i] : 0;
-                var colorId = snapshot.ColorIds != null && i < snapshot.ColorIds.Length ? snapshot.ColorIds[i] : -1;
-                var isLocalPlayer = playerId == localPlayerId && playerId >= 0;
+                var player = snapshot.GetPlayerSlot(i);
+                var isLocalPlayer = player.PlayerId == localPlayerId && player.PlayerId >= 0;
                 var row = new UIViewData.PlayerRowViewData(
                     true,
-                    playerId,
-                    username,
-                    teamId,
-                    laneId,
-                    colorId,
-                    ResolveDisplayColor(colorId),
-                    isReady,
+                    player.PlayerId,
+                    player.Username,
+                    player.TeamId,
+                    player.LaneId,
+                    player.ColorId,
+                    ResolveDisplayColor(player.ColorId),
+                    player.IsReady,
                     isLocalPlayer,
-                    isLocalPlayer && !isReady,
+                    isLocalPlayer && !player.IsReady,
                     isLocalPlayer);
 
                 allRows[i] = row;
-                if (teamId == (int)TeamSide.Right)
+                if (player.TeamId == (int)TeamSide.Right)
                     rightRows.Add(row);
                 else
                     leftRows.Add(row);
 
-                if (colorId >= 0 && !claimedColors.ContainsKey(colorId))
-                    claimedColors.Add(colorId, playerId);
+                if (player.ColorId >= 0 && !claimedColors.ContainsKey(player.ColorId))
+                    claimedColors.Add(player.ColorId, player.PlayerId);
 
                 if (isLocalPlayer)
-                    localPlayerColorId = colorId;
+                    localPlayerColorId = player.ColorId;
             }
 
             var colorOptions = BuildColorOptions(claimedColors, localPlayerColorId);
-            return new UIViewData(allRows, leftRows.ToArray(), rightRows.ToArray(), colorOptions, localPlayerId, snapshot.IsLocalPlayerReady, snapshot.CurrentPlayerCount, snapshot.TargetPlayerCapacity);
+            return new UIViewData(
+                allRows: allRows,
+                leftTeamRows: leftRows.ToArray(),
+                rightTeamRows: rightRows.ToArray(),
+                colorOptions: colorOptions,
+                localPlayerId: localPlayerId,
+                isLocalPlayerReady: snapshot.IsLocalPlayerReady,
+                currentPlayerCount: snapshot.CurrentPlayerCount,
+                targetPlayerCapacity: snapshot.TargetPlayerCapacity);
         }
 
         private UIViewData.ColorOptionViewData[] BuildColorOptions(IReadOnlyDictionary<int, int> claimedColors, int localPlayerColorId)
@@ -258,24 +261,21 @@ namespace UI
             }
 
             var activePlayerIds = new HashSet<int>();
-            RefreshTeamEntries(viewData.leftTeamRows, viewData.colorOptions, leftTeamParent, activePlayerIds);
-            RefreshTeamEntries(viewData.rightTeamRows, viewData.colorOptions, rightTeamParent, activePlayerIds);
+            RefreshTeamEntries(viewData.LeftTeamRows, viewData.ColorOptions, leftTeamParent, activePlayerIds);
+            RefreshTeamEntries(viewData.RightTeamRows, viewData.ColorOptions, rightTeamParent, activePlayerIds);
             RemoveStaleEntries(activePlayerIds);
         }
 
         private void RefreshTeamEntries(UIViewData.PlayerRowViewData[] rows, UIViewData.ColorOptionViewData[] colorOptions, Transform parent, ISet<int> activePlayerIds)
         {
-            if (rows == null)
-                return;
-
             var resolvedParent = parent != null ? parent : transform;
             for (var i = 0; i < rows.Length; i++)
             {
                 var row = rows[i];
-                if (!row.hasValue)
+                if (!row.HasValue)
                     continue;
 
-                var entry = GetOrCreatePlayerEntry(row.playerId, row.isLocalPlayer, resolvedParent);
+                var entry = GetOrCreatePlayerEntry(row.PlayerId, row.IsLocalPlayer, resolvedParent);
                 if (entry == null)
                     continue;
 
@@ -283,12 +283,12 @@ namespace UI
                     entry.transform.SetParent(resolvedParent, false);
 
                 entry.transform.SetSiblingIndex(i);
-                if (row.isLocalPlayer && entry is UIPlayerEntryLocal localEntry)
+                if (row.IsLocalPlayer && entry is UIPlayerEntryLocal localEntry)
                     localEntry.BindLocal(this, row, colorOptions, readyButtonLabel, readyLockedButtonLabel);
                 else
                     entry.Bind(this, row, readyButtonLabel, readyLockedButtonLabel);
 
-                activePlayerIds.Add(row.playerId);
+                activePlayerIds.Add(row.PlayerId);
             }
         }
 

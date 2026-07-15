@@ -9,73 +9,73 @@ namespace UI
         {
             public PlayerRowViewData(bool hasValue, int playerId, string username, int teamId, int laneId, int colorId, Color displayColor, bool isReady, bool isLocalPlayer, bool canUseReadyAction, bool canUseColorAction)
             {
-                this.hasValue = hasValue;
-                this.playerId = playerId;
-                this.username = username ?? string.Empty;
-                this.teamId = teamId;
-                this.laneId = laneId;
-                this.colorId = colorId;
-                this.displayColor = displayColor;
-                this.isReady = isReady;
-                this.isLocalPlayer = isLocalPlayer;
-                this.canUseReadyAction = canUseReadyAction;
-                this.canUseColorAction = canUseColorAction;
+                HasValue = hasValue;
+                PlayerId = playerId;
+                Username = username ?? string.Empty;
+                TeamId = teamId;
+                LaneId = laneId;
+                ColorId = colorId;
+                DisplayColor = displayColor;
+                IsReady = isReady;
+                IsLocalPlayer = isLocalPlayer;
+                CanUseReadyAction = canUseReadyAction;
+                CanUseColorAction = canUseColorAction;
             }
 
-            public bool hasValue { get; }
-            public int playerId { get; }
-            public string username { get; }
-            public int teamId { get; }
-            public int laneId { get; }
-            public int colorId { get; }
-            public Color displayColor { get; }
-            public bool isReady { get; }
-            public bool isLocalPlayer { get; }
-            public bool canUseReadyAction { get; }
-            public bool canUseColorAction { get; }
+            public bool HasValue { get; }
+            public int PlayerId { get; }
+            public string Username { get; }
+            public int TeamId { get; }
+            public int LaneId { get; }
+            public int ColorId { get; }
+            public Color DisplayColor { get; }
+            public bool IsReady { get; }
+            public bool IsLocalPlayer { get; }
+            public bool CanUseReadyAction { get; }
+            public bool CanUseColorAction { get; }
         }
 
         public readonly struct ColorOptionViewData
         {
             public ColorOptionViewData(int colorId, Color displayColor, bool isClaimed, int claimedByPlayerId, bool isAvailableForLocalPlayer)
             {
-                this.colorId = colorId;
-                this.displayColor = displayColor;
-                this.isClaimed = isClaimed;
-                this.claimedByPlayerId = claimedByPlayerId;
-                this.isAvailableForLocalPlayer = isAvailableForLocalPlayer;
+                ColorId = colorId;
+                DisplayColor = displayColor;
+                IsClaimed = isClaimed;
+                ClaimedByPlayerId = claimedByPlayerId;
+                IsAvailableForLocalPlayer = isAvailableForLocalPlayer;
             }
 
-            public int colorId { get; }
-            public Color displayColor { get; }
-            public bool isClaimed { get; }
-            public int claimedByPlayerId { get; }
-            public bool isAvailableForLocalPlayer { get; }
+            public int ColorId { get; }
+            public Color DisplayColor { get; }
+            public bool IsClaimed { get; }
+            public int ClaimedByPlayerId { get; }
+            public bool IsAvailableForLocalPlayer { get; }
         }
 
         private static readonly PlayerRowViewData EmptyPlayerRow = new(false, -1, string.Empty, 0, 0, -1, Color.white, false, false, false, false);
 
         public UIViewData(PlayerRowViewData[] allRows, PlayerRowViewData[] leftTeamRows, PlayerRowViewData[] rightTeamRows, ColorOptionViewData[] colorOptions, int localPlayerId, bool isLocalPlayerReady, int currentPlayerCount, int targetPlayerCapacity)
         {
-            this.allRows = allRows ?? Array.Empty<PlayerRowViewData>();
-            this.leftTeamRows = leftTeamRows ?? Array.Empty<PlayerRowViewData>();
-            this.rightTeamRows = rightTeamRows ?? Array.Empty<PlayerRowViewData>();
-            this.colorOptions = colorOptions ?? Array.Empty<ColorOptionViewData>();
+            AllRows = allRows;
+            LeftTeamRows = leftTeamRows;
+            RightTeamRows = rightTeamRows;
+            ColorOptions = colorOptions;
             LocalPlayerId = localPlayerId;
             IsLocalPlayerReady = isLocalPlayerReady;
             CurrentPlayerCount = currentPlayerCount;
             TargetPlayerCapacity = targetPlayerCapacity;
         }
 
-        public PlayerRowViewData[] allRows { get; }
-        public PlayerRowViewData[] leftTeamRows { get; }
-        public PlayerRowViewData[] rightTeamRows { get; }
-        public ColorOptionViewData[] colorOptions { get; }
+        public PlayerRowViewData[] AllRows { get; }
+        public PlayerRowViewData[] LeftTeamRows { get; }
+        public PlayerRowViewData[] RightTeamRows { get; }
+        public ColorOptionViewData[] ColorOptions { get; }
         public int LocalPlayerId { get; }
         public bool IsLocalPlayerReady { get; }
         public int CurrentPlayerCount { get; }
         public int TargetPlayerCapacity { get; }
-        public bool HasPlayers => allRows.Length > 0;
+        public bool HasPlayers => AllRows.Length > 0;
 
         public PlayerRowViewData LocalPlayerRow
         {
@@ -87,11 +87,11 @@ namespace UI
 
         public bool TryGetRow(int playerId, out PlayerRowViewData row)
         {
-            for (var i = 0; i < allRows.Length; i++)
+            for (var i = 0; i < AllRows.Length; i++)
             {
-                if (allRows[i].playerId == playerId)
+                if (AllRows[i].PlayerId == playerId)
                 {
-                    row = allRows[i];
+                    row = AllRows[i];
                     return true;
                 }
             }
@@ -102,15 +102,12 @@ namespace UI
 
         public bool TryGetColorOption(int colorId, out ColorOptionViewData option)
         {
-            if (colorOptions != null)
+            for (var i = 0; i < ColorOptions.Length; i++)
             {
-                for (var i = 0; i < colorOptions.Length; i++)
+                if (ColorOptions[i].ColorId == colorId)
                 {
-                    if (colorOptions[i].colorId == colorId)
-                    {
-                        option = colorOptions[i];
-                        return true;
-                    }
+                    option = ColorOptions[i];
+                    return true;
                 }
             }
 
@@ -120,7 +117,15 @@ namespace UI
 
         public static UIViewData CreateEmpty()
         {
-            return new UIViewData(Array.Empty<PlayerRowViewData>(), Array.Empty<PlayerRowViewData>(), Array.Empty<PlayerRowViewData>(), Array.Empty<ColorOptionViewData>(), -1, false, 0, 0);
+            return new UIViewData(
+                allRows: Array.Empty<PlayerRowViewData>(),
+                leftTeamRows: Array.Empty<PlayerRowViewData>(),
+                rightTeamRows: Array.Empty<PlayerRowViewData>(),
+                colorOptions: Array.Empty<ColorOptionViewData>(),
+                localPlayerId: -1,
+                isLocalPlayerReady: false,
+                currentPlayerCount: 0,
+                targetPlayerCapacity: 0);
         }
     }
 }

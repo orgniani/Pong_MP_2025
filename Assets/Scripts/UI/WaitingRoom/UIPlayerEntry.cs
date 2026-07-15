@@ -18,10 +18,10 @@ namespace UI
         public void Bind(UIWaitingRoom waitingRoom, UIViewData.PlayerRowViewData row, string readyLabel, string readyLockedLabel)
         {
             this.waitingRoom = waitingRoom;
-            playerId = row.playerId;
+            playerId = row.PlayerId;
 
             if (playerNameText != null)
-                playerNameText.text = row.username;
+                playerNameText.text = row.Username;
 
             BindRow(row, readyLabel, readyLockedLabel);
         }

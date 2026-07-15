@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Common;
 
 namespace Managers.Network
@@ -96,14 +97,46 @@ namespace Managers.Network
         private static readonly int[] EmptyLaneIds = Array.Empty<int>();
         private static readonly int[] EmptyColorIds = Array.Empty<int>();
 
+        public readonly struct PlayerSlot
+        {
+            public PlayerSlot(int playerId, string username, bool isReady, int teamId, int laneId, int colorId)
+            {
+                PlayerId = playerId;
+                Username = username ?? string.Empty;
+                IsReady = isReady;
+                TeamId = teamId;
+                LaneId = laneId;
+                ColorId = colorId;
+            }
+
+            public int PlayerId { get; }
+            public string Username { get; }
+            public bool IsReady { get; }
+            public int TeamId { get; }
+            public int LaneId { get; }
+            public int ColorId { get; }
+        }
+
+        public static LobbySessionSnapshot Empty { get; } = new(
+            waitingUsernames: EmptyUsernames,
+            playerIds: EmptyPlayerIds,
+            readyStates: EmptyReadyStates,
+            teamIds: EmptyTeamIds,
+            laneIds: EmptyLaneIds,
+            colorIds: EmptyColorIds,
+            localPlayerId: -1,
+            isLocalPlayerReady: false,
+            currentPlayerCount: 0,
+            targetPlayerCapacity: 0);
+
         public LobbySessionSnapshot(string[] waitingUsernames, int[] playerIds, bool[] readyStates, int[] teamIds, int[] laneIds, int[] colorIds, int localPlayerId, bool isLocalPlayerReady, int currentPlayerCount, int targetPlayerCapacity)
         {
-            WaitingUsernames = waitingUsernames ?? EmptyUsernames;
-            PlayerIds = playerIds ?? EmptyPlayerIds;
-            ReadyStates = readyStates ?? EmptyReadyStates;
-            TeamIds = teamIds ?? EmptyTeamIds;
-            LaneIds = laneIds ?? EmptyLaneIds;
-            ColorIds = colorIds ?? EmptyColorIds;
+            WaitingUsernames = waitingUsernames;
+            PlayerIds = playerIds;
+            ReadyStates = readyStates;
+            TeamIds = teamIds;
+            LaneIds = laneIds;
+            ColorIds = colorIds;
             LocalPlayerId = localPlayerId;
             IsLocalPlayerReady = isLocalPlayerReady;
             CurrentPlayerCount = Math.Max(0, currentPlayerCount);
@@ -118,6 +151,55 @@ namespace Managers.Network
         public int[] ColorIds { get; }
         public int LocalPlayerId { get; }
         public bool IsLocalPlayerReady { get; }
+        public int CurrentPlayerCount { get; }
+        public int TargetPlayerCapacity { get; }
+        public int PlayerCount => WaitingUsernames.Length;
+
+        public PlayerSlot GetPlayerSlot(int index)
+        {
+            if (index < 0 || index >= PlayerCount)
+                return default;
+
+            return new PlayerSlot(
+                PlayerIds[index],
+                WaitingUsernames[index],
+                ReadyStates[index],
+                TeamIds[index],
+                LaneIds[index],
+                ColorIds[index]);
+        }
+    }
+
+    public readonly struct LobbyRosterData
+    {
+        public LobbyRosterData(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, IReadOnlyList<int> teamIds, IReadOnlyList<int> laneIds, IReadOnlyList<int> colorIds, int currentPlayerCount, int targetPlayerCapacity)
+        {
+            Usernames = usernames;
+            PlayerIds = playerIds;
+            ReadyStates = readyStates;
+            TeamIds = teamIds;
+            LaneIds = laneIds;
+            ColorIds = colorIds;
+            CurrentPlayerCount = currentPlayerCount;
+            TargetPlayerCapacity = targetPlayerCapacity;
+        }
+
+        public static LobbyRosterData Empty { get; } = new(
+            usernames: Array.Empty<string>(),
+            playerIds: Array.Empty<int>(),
+            readyStates: Array.Empty<bool>(),
+            teamIds: Array.Empty<int>(),
+            laneIds: Array.Empty<int>(),
+            colorIds: Array.Empty<int>(),
+            currentPlayerCount: 0,
+            targetPlayerCapacity: 0);
+
+        public IReadOnlyList<string> Usernames { get; }
+        public IReadOnlyList<int> PlayerIds { get; }
+        public IReadOnlyList<bool> ReadyStates { get; }
+        public IReadOnlyList<int> TeamIds { get; }
+        public IReadOnlyList<int> LaneIds { get; }
+        public IReadOnlyList<int> ColorIds { get; }
         public int CurrentPlayerCount { get; }
         public int TargetPlayerCapacity { get; }
     }

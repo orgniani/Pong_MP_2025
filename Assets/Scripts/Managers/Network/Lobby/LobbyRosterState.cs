@@ -86,25 +86,31 @@ namespace Managers.Network
             }
         }
 
-        public void SetRoster(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, IReadOnlyList<int> teamIds, IReadOnlyList<int> laneIds, IReadOnlyList<int> colorIds, int currentPlayerCount, int targetPlayerCapacity)
+        public void SetRoster(LobbyRosterData roster)
         {
             if (!Object.HasStateAuthority)
                 return;
 
-            var count = usernames != null ? Math.Min(usernames.Count, MaxRosterSize) : 0;
+            var usernames = roster.Usernames;
+            var playerIds = roster.PlayerIds;
+            var readyStates = roster.ReadyStates;
+            var teamIds = roster.TeamIds;
+            var laneIds = roster.LaneIds;
+            var colorIds = roster.ColorIds;
+            var count = Math.Min(usernames.Count, MaxRosterSize);
 
             for (var i = 0; i < MaxRosterSize; i++)
             {
                 Usernames.Set(i, i < count ? usernames[i] : default);
-                PlayerIds.Set(i, i < count && playerIds != null && i < playerIds.Count ? Mathf.Max(0, playerIds[i]) : default);
-                ReadyStates.Set(i, i < count && readyStates != null && i < readyStates.Count && readyStates[i] ? 1 : 0);
-                TeamIds.Set(i, i < count && teamIds != null && i < teamIds.Count ? Mathf.Max(0, teamIds[i]) : default);
-                LaneIds.Set(i, i < count && laneIds != null && i < laneIds.Count ? Mathf.Max(0, laneIds[i]) : default);
-                ColorIds.Set(i, i < count && colorIds != null && i < colorIds.Count ? colorIds[i] : -1);
+                PlayerIds.Set(i, i < count && i < playerIds.Count ? Mathf.Max(0, playerIds[i]) : default);
+                ReadyStates.Set(i, i < count && i < readyStates.Count && readyStates[i] ? 1 : 0);
+                TeamIds.Set(i, i < count && i < teamIds.Count ? Mathf.Max(0, teamIds[i]) : default);
+                LaneIds.Set(i, i < count && i < laneIds.Count ? Mathf.Max(0, laneIds[i]) : default);
+                ColorIds.Set(i, i < count && i < colorIds.Count ? colorIds[i] : -1);
             }
 
-            _currentPlayerCount = Math.Max(0, currentPlayerCount);
-            _targetPlayerCapacity = Math.Max(0, targetPlayerCapacity);
+            _currentPlayerCount = Math.Max(0, roster.CurrentPlayerCount);
+            _targetPlayerCapacity = Math.Max(0, roster.TargetPlayerCapacity);
             _snapshotRevision++;
         }
 
@@ -152,7 +158,17 @@ namespace Managers.Network
                 }
             }
 
-            return new LobbySessionSnapshot(usernames.ToArray(), playerIds.ToArray(), readyStates.ToArray(), teamIds.ToArray(), laneIds.ToArray(), colorIds.ToArray(), localPlayerId, isLocalPlayerReady, _currentPlayerCount, _targetPlayerCapacity);
+            return new LobbySessionSnapshot(
+                waitingUsernames: usernames.ToArray(),
+                playerIds: playerIds.ToArray(),
+                readyStates: readyStates.ToArray(),
+                teamIds: teamIds.ToArray(),
+                laneIds: laneIds.ToArray(),
+                colorIds: colorIds.ToArray(),
+                localPlayerId: localPlayerId,
+                isLocalPlayerReady: isLocalPlayerReady,
+                currentPlayerCount: _currentPlayerCount,
+                targetPlayerCapacity: _targetPlayerCapacity);
         }
 
         public void RequestLocalPlayerColorChange(int colorId)
