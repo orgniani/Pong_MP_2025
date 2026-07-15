@@ -52,14 +52,13 @@ namespace Managers
             ReferenceValidator.ValidateOptional(matchRulesConfig, nameof(matchRulesConfig), this);
             if (matchRulesConfig != null)
                 MatchRulesRegistry.RegisterProvider(new MatchRulesProvider(matchRulesConfig), this);
+
             ReferenceValidator.ValidateOptional(oneVsOneSpawnPoints, nameof(oneVsOneSpawnPoints), this);
             ReferenceValidator.ValidateOptional(twoVsTwoSpawnPoints, nameof(twoVsTwoSpawnPoints), this);
 
             var runner = FindFirstObjectByType<NetworkRunner>();
-            if (runner == null)
-                return;
-
-            BindRunner(runner);
+            if (runner != null)
+                BindRunner(runner);
         }
 
         private void OnDestroy()
@@ -70,10 +69,9 @@ namespace Managers
         void OnApplicationQuit ()
         {
             if (_networkRunner)
-            {
                 _networkRunner.Shutdown();
-                _networkRunner = null;
-            }
+
+            _networkRunner = null;
         }
 
         public void Shutdown ()
@@ -165,22 +163,25 @@ namespace Managers
 
         void INetworkRunnerCallbacks.OnPlayerJoined(NetworkRunner runner, PlayerRef player)
         {
-            if (runner.IsServer)
+            if (!runner.IsServer)
             {
-                var matchSessionState = runner.GetComponent<MatchSessionState>();
-                if (matchSessionState != null && matchSessionState.IsPostGameCleanup)
-                {
-                    Log($"cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
-                    runner.Disconnect(player, null);
-                    return;
-                }
+                OnRosterChanged?.Invoke();
+                return;
+            }
 
-                _playerSpawner ??= new NetworkPlayerSpawner(playerPrefab);
-                if (IsGameSceneActive() && matchSessionState?.MatchInProgress == true)
-                {
-                    SpawnMissingPlayer(runner, player);
-                    EnsureGameplayManagers(runner);
-                }
+            var matchSessionState = runner.GetComponent<MatchSessionState>();
+            if (matchSessionState != null && matchSessionState.IsPostGameCleanup)
+            {
+                Log($"cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
+                runner.Disconnect(player, null);
+                return;
+            }
+
+            _playerSpawner ??= new NetworkPlayerSpawner(playerPrefab);
+            if (IsGameSceneActive() && matchSessionState?.MatchInProgress == true)
+            {
+                SpawnMissingPlayer(runner, player);
+                EnsureGameplayManagers(runner);
             }
 
             OnRosterChanged?.Invoke();
@@ -188,29 +189,38 @@ namespace Managers
 
         void INetworkRunnerCallbacks.OnPlayerLeft(NetworkRunner runner, PlayerRef player)
         {
-            if (runner.IsServer)
+            if (!runner.IsServer)
             {
-                if (_playerSpawner != null && _playerSpawner.IsSpawned(player))
-                    _playerSpawner.DespawnPlayer(runner, player);
+                OnRosterChanged?.Invoke();
+                return;
+            }
 
-                var matchSessionState = runner.GetComponent<MatchSessionState>();
-                if (matchSessionState != null && matchSessionState.MatchInProgress
-                    && _gameOverManager != null && !_gameOverManager.IsGameOver
-                    && runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner))
-                {
-                    _gameOverManager.TriggerForfeit(GameOverReason.PlayerDisconnected);
-                }
+            if (_playerSpawner != null && _playerSpawner.IsSpawned(player))
+                _playerSpawner.DespawnPlayer(runner, player);
 
-                if (runner.ActivePlayers.Count() == 0)
-                {
-                    ResetToWaitingState(runner, matchSessionState);
-                }
-                else if (matchSessionState != null && !matchSessionState.MatchInProgress
-                         && !matchSessionState.IsPostGameCleanup
-                         && runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner))
-                {
-                    matchSessionState.RearmAutoStart();
-                }
+            var matchSessionState = runner.GetComponent<MatchSessionState>();
+            var activePlayerCount = runner.ActivePlayers.Count();
+            var requiredPlayers = ResolveRequiredPlayersForActiveMode(runner);
+
+            if (matchSessionState != null && matchSessionState.MatchInProgress
+                && _gameOverManager != null && !_gameOverManager.IsGameOver
+                && activePlayerCount < requiredPlayers)
+            {
+                _gameOverManager.TriggerForfeit(GameOverReason.PlayerDisconnected);
+            }
+
+            if (activePlayerCount == 0)
+            {
+                ResetToWaitingState(runner, matchSessionState);
+                OnRosterChanged?.Invoke();
+                return;
+            }
+
+            if (matchSessionState != null && !matchSessionState.MatchInProgress
+                && !matchSessionState.IsPostGameCleanup
+                && activePlayerCount < requiredPlayers)
+            {
+                matchSessionState.RearmAutoStart();
             }
 
             OnRosterChanged?.Invoke();
@@ -235,9 +245,7 @@ namespace Managers
         void INetworkRunnerCallbacks.OnInput(NetworkRunner runner, NetworkInput input)
         {
             if (!runner.IsClient || !runner.IsPlayerValid(runner.LocalPlayer))
-            {
                 return;
-            }
 
             input.Set(new Players.PlayerInputData
             {
@@ -256,22 +264,24 @@ namespace Managers
         {
             RefreshLaneVisibilityForCurrentMode(runner);
 
-            if (!runner.IsServer) return;
+            if (!runner.IsServer)
+                return;
 
             var matchSessionState = runner.GetComponent<MatchSessionState>();
+            var activePlayerCount = runner.ActivePlayers.Count();
+            var requiredPlayers = ResolveRequiredPlayersForActiveMode(runner);
 
             if (!IsGameSceneActive())
             {
                 PrepareForLobbyState();
 
-                if (matchSessionState != null && !matchSessionState.IsPostGameCleanup
-                    && runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner))
-                    matchSessionState?.RearmAutoStart();
+                if (matchSessionState != null && !matchSessionState.IsPostGameCleanup && activePlayerCount < requiredPlayers)
+                    matchSessionState.RearmAutoStart();
 
                 return;
             }
 
-            if (runner.ActivePlayers.Count() == 0)
+            if (activePlayerCount == 0)
             {
                 ResetToWaitingState(runner, matchSessionState);
                 return;
@@ -283,17 +293,12 @@ namespace Managers
             _playerSpawner ??= new NetworkPlayerSpawner(playerPrefab);
 
             foreach (var player in runner.ActivePlayers)
-            {
                 SpawnMissingPlayer(runner, player);
-            }
 
             EnsureGameplayManagers(runner);
 
-            if (runner.ActivePlayers.Count() < ResolveRequiredPlayersForActiveMode(runner)
-                && _gameOverManager != null && !_gameOverManager.IsGameOver)
-            {
+            if (activePlayerCount < requiredPlayers && _gameOverManager != null && !_gameOverManager.IsGameOver)
                 _gameOverManager.TriggerForfeit(GameOverReason.PlayerDisconnected);
-            }
         }
         void INetworkRunnerCallbacks.OnSceneLoadStart (NetworkRunner runner) { }
         void INetworkRunnerCallbacks.OnObjectExitAOI (NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
@@ -335,8 +340,7 @@ namespace Managers
             if (runner == null || !runner.IsServer)
                 return;
 
-            var playersToDisconnect = runner.ActivePlayers.ToArray();
-            foreach (var player in playersToDisconnect)
+            foreach (var player in runner.ActivePlayers.ToArray())
             {
                 Log($"disconnecting player={player.PlayerId} during post-game cleanup");
                 runner.Disconnect(player, null);
@@ -357,7 +361,7 @@ namespace Managers
         private void EnsureGameplayManagers(NetworkRunner runner)
         {
             _scoreManager = FindFirstObjectByType<ScoreManager>()
-                            ?? runner.Spawn(scoreManagerPrefab, Vector3.zero, Quaternion.identity).GetComponent<ScoreManager>();
+                ?? runner.Spawn(scoreManagerPrefab, Vector3.zero, Quaternion.identity).GetComponent<ScoreManager>();
 
             if (_timerManager == null)
             {
@@ -372,7 +376,7 @@ namespace Managers
             }
 
             _gameOverManager = FindFirstObjectByType<GameOverManager>()
-                               ?? runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity).GetComponent<GameOverManager>();
+                ?? runner.Spawn(gameOverManagerPrefab, Vector3.zero, Quaternion.identity).GetComponent<GameOverManager>();
 
             TryBindBallGoalCallbacks();
         }

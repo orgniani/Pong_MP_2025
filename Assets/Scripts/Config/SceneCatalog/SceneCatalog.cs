@@ -6,77 +6,77 @@ namespace Config
     {
         public static int GetMainMenuIndex(int fallbackIndex)
         {
-            return ResolveIndex(catalog => catalog.MainMenuBuildIndex, fallbackIndex, "MainMenu");
+            return GetIndexOrFallback(fallbackIndex, "MainMenu", catalog => catalog.MainMenuBuildIndex);
         }
 
         public static int GetMainMenuIndex()
         {
-            return ResolveRequiredIndex(catalog => catalog.MainMenuBuildIndex, "MainMenu");
+            return GetRequiredIndex("MainMenu", catalog => catalog.MainMenuBuildIndex);
         }
 
         public static int GetLobbyIndex(int fallbackIndex)
         {
-            return ResolveIndex(catalog => catalog.LobbyBuildIndex, fallbackIndex, "Lobby");
+            return GetIndexOrFallback(fallbackIndex, "Lobby", catalog => catalog.LobbyBuildIndex);
         }
 
         public static int GetLobbyIndex()
         {
-            return ResolveRequiredIndex(catalog => catalog.LobbyBuildIndex, "Lobby");
+            return GetRequiredIndex("Lobby", catalog => catalog.LobbyBuildIndex);
         }
 
         public static int GetGameIndex(int fallbackIndex)
         {
-            return ResolveIndex(catalog => catalog.GameBuildIndex, fallbackIndex, "Game");
+            return GetIndexOrFallback(fallbackIndex, "Game", catalog => catalog.GameBuildIndex);
         }
 
         public static int GetGameIndex()
         {
-            return ResolveRequiredIndex(catalog => catalog.GameBuildIndex, "Game");
+            return GetRequiredIndex("Game", catalog => catalog.GameBuildIndex);
         }
 
-        private static int ResolveIndex(System.Func<SceneIndexCatalog, int> selector, int fallbackIndex, string label)
+        private static int GetIndexOrFallback(int fallbackIndex, string label, System.Func<SceneIndexCatalog, int> selector)
         {
-            var catalog = GetRegisteredCatalog();
-            if (catalog == null)
+            if (!TryGetCatalog(out var catalog))
             {
                 Debug.LogWarning($"[SceneCatalog] Catalog is not initialized. Using fallback index {fallbackIndex} for {label}. Add SceneCatalogBootstrap in startup flow.");
                 return fallbackIndex;
             }
 
-            var configuredIndex = selector(catalog);
-            if (configuredIndex >= 0)
-            {
-                WarnIfMissingInBuildSettings(configuredIndex, label);
-                return configuredIndex;
-            }
-
-            Debug.LogWarning($"[SceneCatalog] Invalid index for {label} in {nameof(SceneIndexCatalog)}. Using fallback index {fallbackIndex}.");
-            return fallbackIndex;
+            return ResolveConfiguredIndex(label, selector(catalog), fallbackIndex);
         }
 
-        private static int ResolveRequiredIndex(System.Func<SceneIndexCatalog, int> selector, string label)
+        private static int GetRequiredIndex(string label, System.Func<SceneIndexCatalog, int> selector)
         {
-            var catalog = GetRegisteredCatalog();
-            if (catalog == null)
+            if (!TryGetCatalog(out var catalog))
             {
                 Debug.LogError($"[SceneCatalog] Catalog is not initialized. Cannot resolve required index for {label}. Add SceneCatalogBootstrap in startup flow.");
                 return -1;
             }
 
-            var configuredIndex = selector(catalog);
+            return ResolveConfiguredIndex(label, selector(catalog), -1);
+        }
+
+        private static int ResolveConfiguredIndex(string label, int configuredIndex, int fallbackIndex)
+        {
             if (configuredIndex >= 0)
             {
                 WarnIfMissingInBuildSettings(configuredIndex, label);
                 return configuredIndex;
+            }
+
+            if (fallbackIndex >= 0)
+            {
+                Debug.LogWarning($"[SceneCatalog] Invalid index for {label} in {nameof(SceneIndexCatalog)}. Using fallback index {fallbackIndex}.");
+                return fallbackIndex;
             }
 
             Debug.LogError($"[SceneCatalog] Invalid index for {label} in {nameof(SceneIndexCatalog)}. Configure a non-negative value.");
             return -1;
         }
 
-        private static SceneIndexCatalog GetRegisteredCatalog()
+        private static bool TryGetCatalog(out SceneIndexCatalog catalog)
         {
-            if (!SceneCatalogRegistry.TryGetCatalog(out var catalog) || catalog == null)
+            if (!SceneCatalogRegistry.TryGetCatalog(out catalog) || catalog == null)
             {
                 if (!SceneCatalogRegistry.IsInitialized)
                 {
@@ -87,10 +87,11 @@ namespace Config
                     Debug.LogError("[SceneCatalog] SceneCatalogRegistry provider returned a null catalog.");
                 }
 
-                return null;
+                catalog = null;
+                return false;
             }
 
-            return catalog;
+            return true;
         }
 
         private static void WarnIfMissingInBuildSettings(int buildIndex, string label)

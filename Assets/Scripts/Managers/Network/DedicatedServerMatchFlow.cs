@@ -43,27 +43,20 @@ namespace Managers.Network
         private void TryStartMatch(NetworkRunner runner)
         {
             if (!runner.IsServer)
-            {
                 return;
-            }
 
             var requiredPlayersToStart = ResolveRequiredPlayersToStart(runner);
-            if (requiredPlayersToStart < 1 || runner.ActivePlayers.Count() < requiredPlayersToStart)
-            {
+            var activePlayerCount = runner.ActivePlayers.Count();
+            if (requiredPlayersToStart < 1 || activePlayerCount < requiredPlayersToStart)
                 return;
-            }
 
             var lobbySessionState = runner.GetComponent<LobbySessionState>();
             if (lobbySessionState != null && !lobbySessionState.AreAllActivePlayersReady(runner, requiredPlayersToStart))
-            {
                 return;
-            }
 
             var matchSessionState = runner.GetComponent<MatchSessionState>();
-            if (matchSessionState != null && !matchSessionState.CanStartMatch(runner.ActivePlayers.Count(), requiredPlayersToStart))
-            {
+            if (matchSessionState != null && !matchSessionState.CanStartMatch(activePlayerCount, requiredPlayersToStart))
                 return;
-            }
 
             var gameSceneIndex = SceneCatalog.GetGameIndex();
             if (gameSceneIndex < 0)

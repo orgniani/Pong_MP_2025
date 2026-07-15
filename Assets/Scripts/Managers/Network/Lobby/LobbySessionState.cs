@@ -54,7 +54,7 @@ namespace Managers.Network
                 return null;
 
             return FindObjectsByType<LobbySessionState>(FindObjectsSortMode.InstanceID)
-                .Where(state => IsUsable(state) && state.Runner == runner)
+                .Where(state => state != null && state.Runner == runner)
                 .OrderByDescending(state => state.Runner.IsRunning)
                 .ThenByDescending(state => state._activationOrder)
                 .FirstOrDefault();
@@ -142,27 +142,24 @@ namespace Managers.Network
             MarkAsActive();
 
             var spawnedFreshLobbyRoster = _runner.IsServer && EnsureRosterSpawned(lobbyRosterStatePrefab);
-
             if (spawnedFreshLobbyRoster)
-            {
-                _waitingUsernames.Clear();
-                _readyPlayers.Clear();
-                _colorIds.Clear();
-            }
+                ClearServerState();
 
             RefreshRosterBinding(LobbyRosterState.ActiveInstance);
 
             if (_runner.IsServer)
+            {
                 RefreshFromRunner(_runner);
-            else if (_rosterState == null)
+                return;
+            }
+
+            if (_rosterState == null)
                 SnapshotChanged?.Invoke(CurrentSnapshot);
         }
 
         public void ResetState()
         {
-            _waitingUsernames.Clear();
-            _readyPlayers.Clear();
-            _colorIds.Clear();
+            ClearServerState();
             var rosterState = _rosterState;
             UnbindRosterState();
 
@@ -241,15 +238,10 @@ namespace Managers.Network
             _activeInstance = this;
         }
 
-        private static bool IsUsable(LobbySessionState state)
-        {
-            return state != null && state.Runner != null;
-        }
-
         private static LobbySessionState ResolvePreferredInstance()
         {
             var resolved = FindObjectsByType<LobbySessionState>(FindObjectsSortMode.InstanceID)
-                .Where(IsUsable)
+                .Where(state => state != null && state.Runner != null)
                 .OrderByDescending(state => state.Runner.IsRunning)
                 .ThenByDescending(state => ReferenceEquals(state, _activeInstance))
                 .ThenByDescending(state => state._activationOrder)
@@ -279,17 +271,15 @@ namespace Managers.Network
         private void RefreshRosterBinding(LobbyRosterState _)
         {
             var rosterState = ResolveRosterStateForRunner();
-
-            if (ReferenceEquals(_rosterState, rosterState))
+            var bindingChanged = !ReferenceEquals(_rosterState, rosterState);
+            if (bindingChanged)
             {
-                if (_rosterState == null)
-                    SnapshotChanged?.Invoke(CurrentSnapshot);
+                UnbindRosterState();
+                _rosterState = rosterState;
 
-                return;
+                if (_rosterState != null)
+                    _rosterState.SnapshotChanged += HandleRosterSnapshotChanged;
             }
-
-            UnbindRosterState();
-            _rosterState = rosterState;
 
             if (_rosterState == null)
             {
@@ -297,8 +287,8 @@ namespace Managers.Network
                 return;
             }
 
-            _rosterState.SnapshotChanged += HandleRosterSnapshotChanged;
-            HandleRosterSnapshotChanged(_rosterState.BuildSnapshot());
+            if (bindingChanged)
+                HandleRosterSnapshotChanged(_rosterState.BuildSnapshot());
 
             if (_runner != null && _runner.IsServer)
                 PublishRoster(_runner);
@@ -321,18 +311,26 @@ namespace Managers.Network
 
         private void SynchronizeServerRoster(NetworkRunner runner)
         {
-            var synchronizedReadyPlayers = new Dictionary<PlayerRef, bool>();
+            var activePlayers = runner.ActivePlayers
+                .OrderBy(player => player.PlayerId)
+                .ToArray();
+            var activePlayerSet = new HashSet<PlayerRef>(activePlayers);
 
             _waitingUsernames.Clear();
-            foreach (var player in runner.ActivePlayers.OrderBy(activePlayer => activePlayer.PlayerId))
+
+            var staleReadyPlayers = _readyPlayers.Keys
+                .Where(player => !activePlayerSet.Contains(player))
+                .ToArray();
+            foreach (var player in staleReadyPlayers)
+                _readyPlayers.Remove(player);
+
+            foreach (var player in activePlayers)
             {
                 _waitingUsernames[player] = ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
-                synchronizedReadyPlayers[player] = _readyPlayers.TryGetValue(player, out var isReady) && isReady;
-            }
 
-            _readyPlayers.Clear();
-            foreach (var entry in synchronizedReadyPlayers)
-                _readyPlayers[entry.Key] = entry.Value;
+                if (!_readyPlayers.ContainsKey(player))
+                    _readyPlayers[player] = false;
+            }
 
             SynchronizeColorAssignments(runner);
         }
@@ -342,33 +340,28 @@ namespace Managers.Network
             if (_rosterState == null)
                 return;
 
-            var orderedEntries = _waitingUsernames
-                .OrderBy(entry => entry.Key.PlayerId)
-                .ToArray();
-
-            var orderedUsernames = orderedEntries
-                .Select(entry => NormalizeUsername(entry.Value))
-                .ToArray();
-            var orderedPlayerIds = orderedEntries
-                .Select(entry => entry.Key.PlayerId)
-                .ToArray();
-            var orderedReadyStates = orderedEntries
-                .Select(entry => _readyPlayers.TryGetValue(entry.Key, out var isReady) && isReady)
-                .ToArray();
+            var orderedEntries = _waitingUsernames.OrderBy(entry => entry.Key.PlayerId);
             var targetPlayerCapacity = ResolveTargetPlayerCapacity(runner);
             var mode = TeamLaneAssignmentUtility.ResolveMode(targetPlayerCapacity);
-            var orderedAssignments = orderedEntries
-                .Select((entry, index) => TeamLaneAssignmentUtility.ResolveAssignment(mode, index))
-                .ToArray();
-            var orderedTeamIds = orderedAssignments
-                .Select(assignment => assignment.TeamId)
-                .ToArray();
-            var orderedLaneIds = orderedAssignments
-                .Select(assignment => assignment.LaneId)
-                .ToArray();
-            var orderedColorIds = orderedEntries
-                .Select(entry => _colorIds.TryGetValue(entry.Key, out var colorId) ? colorId : -1)
-                .ToArray();
+            var orderedUsernames = new List<string>();
+            var orderedPlayerIds = new List<int>();
+            var orderedReadyStates = new List<bool>();
+            var orderedTeamIds = new List<int>();
+            var orderedLaneIds = new List<int>();
+            var orderedColorIds = new List<int>();
+            var slotIndex = 0;
+
+            foreach (var entry in orderedEntries)
+            {
+                var assignment = TeamLaneAssignmentUtility.ResolveAssignment(mode, slotIndex);
+                orderedUsernames.Add(NormalizeUsername(entry.Value));
+                orderedPlayerIds.Add(entry.Key.PlayerId);
+                orderedReadyStates.Add(_readyPlayers.TryGetValue(entry.Key, out var isReady) && isReady);
+                orderedTeamIds.Add(assignment.TeamId);
+                orderedLaneIds.Add(assignment.LaneId);
+                orderedColorIds.Add(_colorIds.TryGetValue(entry.Key, out var colorId) ? colorId : -1);
+                slotIndex++;
+            }
 
             _rosterState.SetRoster(new LobbyRosterData(
                 usernames: orderedUsernames,
@@ -379,6 +372,13 @@ namespace Managers.Network
                 colorIds: orderedColorIds,
                 currentPlayerCount: runner.ActivePlayers.Count(),
                 targetPlayerCapacity: targetPlayerCapacity));
+        }
+
+        private void ClearServerState()
+        {
+            _waitingUsernames.Clear();
+            _readyPlayers.Clear();
+            _colorIds.Clear();
         }
 
         private void SynchronizeColorAssignments(NetworkRunner runner)

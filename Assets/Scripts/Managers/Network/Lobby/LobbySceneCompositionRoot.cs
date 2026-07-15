@@ -25,14 +25,12 @@ namespace Managers.Network
 
         private void Awake()
         {
-            MarkAsActive();
-            SubscribeWaitingRoomLifecycle();
+            Activate();
         }
 
         private void OnEnable()
         {
-            MarkAsActive();
-            SubscribeWaitingRoomLifecycle();
+            Activate();
 
             if (_composedRunner != null)
                 Compose(_composedRunner);
@@ -56,7 +54,7 @@ namespace Managers.Network
                 return;
             }
 
-            MarkAsActive();
+            Activate();
 
             if (!ValidateCompositionReferences(runner))
                 return;
@@ -72,17 +70,14 @@ namespace Managers.Network
 
             waitingRoom.Configure(paddleColorPalette);
             _composedSessionState.Configure(paddleColorPalette);
-            _composedSessionState?.EnterLobby(runner, lobbyRosterStatePrefab);
+            _composedSessionState.EnterLobby(runner, lobbyRosterStatePrefab);
             waitingRoom.Bind(_composedSessionState);
         }
 
         internal static bool TryGetActive(out LobbySceneCompositionRoot root)
         {
-            root = ResolveActiveRoot();
-            if (root == null)
-                return false;
-
-            return true;
+            root = ActiveInstance ?? FindAndCacheActiveRoot();
+            return root != null;
         }
 
         private void SubscribeWaitingRoomLifecycle()
@@ -109,9 +104,10 @@ namespace Managers.Network
             waitingRoom.Bind(_composedSessionState);
         }
 
-        private void MarkAsActive()
+        private void Activate()
         {
             _activeInstance = this;
+            SubscribeWaitingRoomLifecycle();
         }
 
         private bool ValidateCompositionReferences(NetworkRunner runner)
@@ -137,11 +133,8 @@ namespace Managers.Network
             return true;
         }
 
-        private static LobbySceneCompositionRoot ResolveActiveRoot()
+        private static LobbySceneCompositionRoot FindAndCacheActiveRoot()
         {
-            if (ActiveInstance != null)
-                return ActiveInstance;
-
             var resolved = FindFirstInActiveScene<LobbySceneCompositionRoot>();
             if (resolved == null)
                 return null;

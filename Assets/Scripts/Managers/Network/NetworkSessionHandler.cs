@@ -1,7 +1,6 @@
 using Fusion;
 using Fusion.Sockets;
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using System.Threading.Tasks;
 using Managers;
@@ -19,9 +18,7 @@ namespace Managers.Network
         {
             var sceneManager = runner.GetComponent<NetworkSceneManagerDefault>();
             if (sceneManager == null)
-            {
                 sceneManager = runner.gameObject.AddComponent<NetworkSceneManagerDefault>();
-            }
 
             return sceneManager;
         }
@@ -30,8 +27,6 @@ namespace Managers.Network
         {
             runner.ProvideInput = false;
             sessionName = string.IsNullOrWhiteSpace(sessionName) ? DefaultSessionName : sessionName;
-
-            Debug.Log($"{LogPrefix} server started: initializing session='{sessionName}', sceneBuildIndex={buildIndex}, maxPlayers={maxPlayers}, region='{region ?? "auto"}', port={(port.HasValue ? port.Value.ToString() : "default")}");
 
             var args = new StartGameArgs()
             {
@@ -53,38 +48,25 @@ namespace Managers.Network
                 args.Address = NetAddress.Any((ushort)requestedPort);
             }
 
-            var regionApplied = TryApplyRegionOverride(args, region, out var regionEvidence);
-
+            var regionApplied = TryApplyRegionOverride(args, region);
             if (!string.IsNullOrWhiteSpace(region) && !regionApplied)
-            {
-                Debug.LogWarning($"{LogPrefix} region override was requested but cannot be enforced by this Fusion API surface. Requested region='{region}'. {regionEvidence}");
-            }
-
-            Debug.Log($"{LogPrefix} server startup args: session='{sessionName}', effectivePort={(port.HasValue ? requestedPort.ToString() : "default")}, requestedRegion='{region ?? "auto"}', regionApplied={regionApplied}");
+                Debug.LogWarning($"{LogPrefix} region override requested for '{region}', but this Fusion version does not expose a writable FixedRegion path.");
 
             var result = await runner.StartGame(args);
-            Debug.Log($"{LogPrefix} server started result: ok={result.Ok}, session='{sessionName}'");
+            Debug.Log($"{LogPrefix} server start ok={result.Ok}, session='{sessionName}', sceneBuildIndex={buildIndex}, maxPlayers={maxPlayers}, region='{region ?? "auto"}', port={(port.HasValue ? requestedPort.ToString() : "default")}");
             return result.Ok;
         }
 
-        private static bool TryApplyRegionOverride(StartGameArgs args, string region, out string evidence)
+        private static bool TryApplyRegionOverride(StartGameArgs args, string region)
         {
-            evidence = "No region override API found in StartGameArgs.";
-
             if (string.IsNullOrWhiteSpace(region))
-            {
-                evidence = "No region requested.";
                 return false;
-            }
 
             const BindingFlags flags = BindingFlags.Public | BindingFlags.Instance;
             var startGameArgsType = typeof(StartGameArgs);
             var customSettingsProperty = startGameArgsType.GetProperty("CustomPhotonAppSettings", flags);
             if (customSettingsProperty == null || !customSettingsProperty.CanWrite)
-            {
-                evidence = "StartGameArgs.CustomPhotonAppSettings is unavailable in this Fusion version.";
                 return false;
-            }
 
             var customSettings = customSettingsProperty.GetValue(args);
             if (customSettings == null)
@@ -95,21 +77,17 @@ namespace Managers.Network
                 }
                 catch (Exception ex)
                 {
-                    evidence = $"Unable to create CustomPhotonAppSettings instance: {ex.GetType().Name}";
+                    Debug.LogWarning($"{LogPrefix} could not create CustomPhotonAppSettings for region override: {ex.GetType().Name}");
                     return false;
                 }
             }
 
             var fixedRegionProperty = customSettingsProperty.PropertyType.GetProperty("FixedRegion", flags);
             if (fixedRegionProperty == null || !fixedRegionProperty.CanWrite)
-            {
-                evidence = "CustomPhotonAppSettings.FixedRegion is unavailable in this Fusion version.";
                 return false;
-            }
 
             fixedRegionProperty.SetValue(customSettings, region);
             customSettingsProperty.SetValue(args, customSettings);
-            evidence = "Applied via StartGameArgs.CustomPhotonAppSettings.FixedRegion.";
             return true;
         }
 
@@ -129,7 +107,7 @@ namespace Managers.Network
             };
 
             var result = await runner.StartGame(args);
-            Debug.Log($"{LogPrefix} client connect result: ok={result.Ok}, session='{sessionName}'");
+            Debug.Log($"{LogPrefix} client connect ok={result.Ok}, session='{sessionName}'");
             return result.Ok;
         }
 
@@ -141,7 +119,7 @@ namespace Managers.Network
 
             var result = await runner.JoinSessionLobby(lobby);
 
-            Debug.Log($"{LogPrefix} join lobby result: ok={result.Ok}");
+            Debug.Log($"{LogPrefix} join lobby ok={result.Ok}, lobby='{lobby}'");
             return result.Ok;
         }
     }
