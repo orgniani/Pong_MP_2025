@@ -47,11 +47,13 @@ namespace Network
                 return;
 
             var requiredPlayersToStart = ResolveRequiredPlayersToStart(runner);
-            var activePlayerCount = runner.ActivePlayers.Count();
+            var lobbySessionState = runner.GetComponent<LobbySessionState>();
+            var activePlayerCount = lobbySessionState != null
+                ? lobbySessionState.CountStartEligiblePlayers(runner)
+                : runner.ActivePlayers.Count();
             if (requiredPlayersToStart < 1 || activePlayerCount < requiredPlayersToStart)
                 return;
 
-            var lobbySessionState = runner.GetComponent<LobbySessionState>();
             if (lobbySessionState != null && !lobbySessionState.AreAllActivePlayersReady(runner, requiredPlayersToStart))
                 return;
 

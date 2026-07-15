@@ -7,6 +7,20 @@ using UnityEngine;
 
 namespace Lobby
 {
+    internal readonly struct LobbyColorSynchronizationResult
+    {
+        public static LobbyColorSynchronizationResult Empty { get; } = new(Array.Empty<PlayerRef>());
+
+        public LobbyColorSynchronizationResult(IReadOnlyList<PlayerRef> playersPendingDisconnect)
+        {
+            PlayersPendingDisconnect = playersPendingDisconnect ?? Array.Empty<PlayerRef>();
+        }
+
+        public IReadOnlyList<PlayerRef> PlayersPendingDisconnect { get; }
+
+        public bool HasPlayersPendingDisconnect => PlayersPendingDisconnect.Count > 0;
+    }
+
     internal sealed class LobbyColorAssignmentCoordinator
     {
         private readonly Dictionary<PlayerRef, int> _colorIds;
@@ -42,8 +56,9 @@ namespace Lobby
             return true;
         }
 
-        public void SynchronizeColorAssignments(NetworkRunner runner)
+        public LobbyColorSynchronizationResult SynchronizeColorAssignments(NetworkRunner runner)
         {
+            var playersWithoutColorAssignments = new List<PlayerRef>();
             var activePlayers = runner.ActivePlayers
                 .OrderBy(player => player.PlayerId)
                 .ToArray();
@@ -77,8 +92,12 @@ namespace Lobby
                 if (TryAssignColorForLobbyMember(runner, player))
                     continue;
 
-                runner.Disconnect(player, null);
+                playersWithoutColorAssignments.Add(player);
             }
+
+            return playersWithoutColorAssignments.Count == 0
+                ? LobbyColorSynchronizationResult.Empty
+                : new LobbyColorSynchronizationResult(playersWithoutColorAssignments);
         }
 
         public bool TryAssignColorForLobbyMember(NetworkRunner runner, PlayerRef player)

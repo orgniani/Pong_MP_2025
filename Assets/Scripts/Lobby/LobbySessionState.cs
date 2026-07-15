@@ -21,6 +21,7 @@ namespace Lobby
         private readonly Dictionary<PlayerRef, string> _lobbyMemberUsernames = new();
         private readonly Dictionary<PlayerRef, bool> _readyPlayers = new();
         private readonly Dictionary<PlayerRef, int> _colorIds = new();
+        private readonly HashSet<PlayerRef> _playersPendingDisconnect = new();
         private PaddleColorPalette _paddleColorPalette;
         private LobbyColorAssignmentCoordinator _colorAssignmentCoordinator;
 
@@ -99,8 +100,7 @@ namespace Lobby
 
             if (!ColorAssignmentCoordinator.TryAssignColorForLobbyMember(runner, player))
             {
-                RemoveLobbyMember(player);
-                runner.Disconnect(player, null);
+                DisconnectLobbyMember(runner, player, removeLobbyStateImmediately: true);
                 return;
             }
 
@@ -205,11 +205,19 @@ namespace Lobby
             if (runner == null || !runner.IsServer)
                 return false;
 
-            var activePlayers = runner.ActivePlayers.ToArray();
+            var activePlayers = GetStartEligiblePlayers(runner);
             if (activePlayers.Length < Math.Max(1, minPlayersToStart))
                 return false;
 
             return activePlayers.All(player => _readyPlayers.TryGetValue(player, out var isReady) && isReady);
+        }
+
+        public int CountStartEligiblePlayers(NetworkRunner runner)
+        {
+            if (runner == null || !runner.IsServer)
+                return 0;
+
+            return GetStartEligiblePlayers(runner).Length;
         }
 
         private void MarkAsActive()
@@ -312,11 +320,12 @@ namespace Lobby
                 RegisterLobbyMember(runner, player);
             }
 
-            ColorAssignmentCoordinator.SynchronizeColorAssignments(runner);
+            RequestPendingColorDisconnects(runner, ColorAssignmentCoordinator.SynchronizeColorAssignments(runner));
         }
 
         private void RegisterLobbyMember(NetworkRunner runner, PlayerRef player)
         {
+            _playersPendingDisconnect.Remove(player);
             _lobbyMemberUsernames[player] = LobbyUsernameTokenUtility.ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
 
             if (!_readyPlayers.ContainsKey(player))
@@ -325,9 +334,33 @@ namespace Lobby
 
         private void RemoveLobbyMember(PlayerRef player)
         {
+            _playersPendingDisconnect.Remove(player);
             _lobbyMemberUsernames.Remove(player);
             _readyPlayers.Remove(player);
             _colorIds.Remove(player);
+        }
+
+        private void RequestPendingColorDisconnects(NetworkRunner runner, LobbyColorSynchronizationResult synchronizationResult)
+        {
+            if (!synchronizationResult.HasPlayersPendingDisconnect)
+                return;
+
+            foreach (var player in synchronizationResult.PlayersPendingDisconnect)
+            {
+                _playersPendingDisconnect.Add(player);
+                DisconnectLobbyMember(runner, player, removeLobbyStateImmediately: false);
+            }
+        }
+
+        private void DisconnectLobbyMember(NetworkRunner runner, PlayerRef player, bool removeLobbyStateImmediately)
+        {
+            if (runner == null || !runner.IsServer || !player.IsRealPlayer)
+                return;
+
+            if (removeLobbyStateImmediately)
+                RemoveLobbyMember(player);
+
+            runner.Disconnect(player, null);
         }
 
         private bool IsLobbyMember(PlayerRef player)
@@ -335,12 +368,24 @@ namespace Lobby
             return _lobbyMemberUsernames.ContainsKey(player);
         }
 
+        private PlayerRef[] GetStartEligiblePlayers(NetworkRunner runner)
+        {
+            if (runner == null)
+                return Array.Empty<PlayerRef>();
+
+            return runner.ActivePlayers
+                .Where(player => !_playersPendingDisconnect.Contains(player))
+                .ToArray();
+        }
+
         private void PublishRoster(NetworkRunner runner)
         {
             if (_rosterState == null)
                 return;
 
-            var orderedEntries = _lobbyMemberUsernames.OrderBy(entry => entry.Key.PlayerId);
+            var orderedEntries = _lobbyMemberUsernames
+                .Where(entry => !_playersPendingDisconnect.Contains(entry.Key))
+                .OrderBy(entry => entry.Key.PlayerId);
             var targetPlayerCapacity = ResolveTargetPlayerCapacity(runner);
             var mode = TeamLaneAssignmentUtility.ResolveMode(targetPlayerCapacity);
             var orderedUsernames = new List<string>();
@@ -370,12 +415,13 @@ namespace Lobby
                 teamIds: orderedTeamIds,
                 laneIds: orderedLaneIds,
                 colorIds: orderedColorIds,
-                currentPlayerCount: runner.ActivePlayers.Count(),
+                currentPlayerCount: orderedPlayerIds.Count,
                 targetPlayerCapacity: targetPlayerCapacity));
         }
 
         private void ClearServerState()
         {
+            _playersPendingDisconnect.Clear();
             _lobbyMemberUsernames.Clear();
             _readyPlayers.Clear();
             _colorIds.Clear();
