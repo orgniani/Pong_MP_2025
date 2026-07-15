@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Helpers;
-using Managers.Network;
+using Network;
 using Players;
 using Balls;
 

@@ -1,4 +1,4 @@
-namespace Managers.Network
+namespace Network
 {
     internal enum SessionLifecyclePhase
     {

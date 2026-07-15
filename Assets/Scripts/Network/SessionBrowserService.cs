@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fusion;
 using Fusion.Sockets;
+using Lobby;
 using UnityEngine;
 
-namespace Managers.Network
+namespace Network
 {
     public sealed class SessionBrowserService : MonoBehaviour, INetworkRunnerCallbacks
     {

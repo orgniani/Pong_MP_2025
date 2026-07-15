@@ -1,13 +1,14 @@
 using Config;
 using Fusion;
 using Helpers;
+using Lobby;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Managers.Network
+namespace Network
 {
     public static class SessionExitToMainMenu
     {

@@ -2,11 +2,11 @@ using System.Linq;
 using Config;
 using Fusion;
 using Helpers;
-using UI;
+using UI.WaitingRoom;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Managers.Network
+namespace Lobby
 {
     [DisallowMultipleComponent]
     public sealed class LobbySceneCompositionRoot : MonoBehaviour

@@ -1,8 +1,9 @@
 using System;
 using System.Collections;
+using Network;
 using UnityEngine;
 
-namespace Managers.Network
+namespace Lobby
 {
     public sealed class LobbyAutoStartCoordinator
     {

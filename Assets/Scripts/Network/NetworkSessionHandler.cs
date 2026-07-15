@@ -1,12 +1,13 @@
 using Fusion;
 using Fusion.Sockets;
+using Lobby;
 using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using Managers;
 using UnityEngine;
 
-namespace Managers.Network
+namespace Network
 {
     public class NetworkSessionHandler
     {

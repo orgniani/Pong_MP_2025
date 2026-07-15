@@ -1,5 +1,7 @@
 using Helpers;
-using Managers.Network;
+using Lobby;
+using Lobby.SessionSnapshot;
+using Network;
 using System;
 using System.Collections.Generic;
 using TMPro;
@@ -8,7 +10,7 @@ using UnityEngine.UI;
 using Config;
 
 
-namespace UI
+namespace UI.WaitingRoom
 {
     public class UIWaitingRoom : MonoBehaviour
     {

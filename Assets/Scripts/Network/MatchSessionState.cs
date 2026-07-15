@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace Managers.Network
+namespace Network
 {
     public class MatchSessionState : MonoBehaviour
     {

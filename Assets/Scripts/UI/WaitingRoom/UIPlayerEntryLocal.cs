@@ -3,7 +3,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UI
+namespace UI.WaitingRoom
 {
     public sealed class UIPlayerEntryLocal : UIPlayerEntry
     {

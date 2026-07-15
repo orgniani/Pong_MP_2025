@@ -4,9 +4,11 @@ using System.Linq;
 using Common;
 using Config;
 using Fusion;
+using Lobby.SessionSnapshot;
+using Network;
 using UnityEngine;
 
-namespace Managers.Network
+namespace Lobby
 {
     public sealed class LobbySessionState : MonoBehaviour
     {
@@ -16,10 +18,11 @@ namespace Managers.Network
         private int _activationOrder;
         private LobbyRosterState _rosterState;
 
-        private readonly Dictionary<PlayerRef, string> _waitingUsernames = new();
+        private readonly Dictionary<PlayerRef, string> _lobbyMemberUsernames = new();
         private readonly Dictionary<PlayerRef, bool> _readyPlayers = new();
         private readonly Dictionary<PlayerRef, int> _colorIds = new();
         private PaddleColorPalette _paddleColorPalette;
+        private LobbyColorAssignmentCoordinator _colorAssignmentCoordinator;
 
         public event Action<LobbySessionSnapshot> SnapshotChanged;
 
@@ -29,6 +32,9 @@ namespace Managers.Network
             _rosterState != null ? _rosterState.BuildSnapshot() : LobbySessionSnapshot.Empty;
 
         public NetworkRunner Runner => _runner != null ? _runner : (_runner = GetComponent<NetworkRunner>());
+
+        private LobbyColorAssignmentCoordinator ColorAssignmentCoordinator =>
+            _colorAssignmentCoordinator ??= new LobbyColorAssignmentCoordinator(_colorIds, IsLobbyMember, () => _paddleColorPalette);
 
         public static LobbySessionState EnsureOnRunner(NetworkRunner runner)
         {
@@ -89,14 +95,11 @@ namespace Managers.Network
             if (runner == null || !runner.IsServer)
                 return;
 
-            _waitingUsernames[player] = LobbyUsernameTokenUtility.ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
-            _readyPlayers[player] = false;
+            RegisterLobbyMember(runner, player);
 
-            if (!TryAssignRandomAvailableColor(runner, player))
+            if (!ColorAssignmentCoordinator.TryAssignColorForLobbyMember(runner, player))
             {
-                _waitingUsernames.Remove(player);
-                _readyPlayers.Remove(player);
-                _colorIds.Remove(player);
+                RemoveLobbyMember(player);
                 runner.Disconnect(player, null);
                 return;
             }
@@ -109,9 +112,7 @@ namespace Managers.Network
             if (runner == null || !runner.IsServer)
                 return;
 
-            _waitingUsernames.Remove(player);
-            _readyPlayers.Remove(player);
-            _colorIds.Remove(player);
+            RemoveLobbyMember(player);
             PublishRoster(runner);
             DedicatedServerMatchFlow.RequestMatchStartEvaluation(runner);
         }
@@ -173,7 +174,7 @@ namespace Managers.Network
 
         public bool TryLockReady(NetworkRunner runner, PlayerRef player)
         {
-            if (runner == null || !runner.IsServer || !player.IsRealPlayer || !_waitingUsernames.ContainsKey(player))
+            if (runner == null || !runner.IsServer || !player.IsRealPlayer || !IsLobbyMember(player))
                 return false;
 
             if (_readyPlayers.TryGetValue(player, out var alreadyReady) && alreadyReady)
@@ -187,19 +188,9 @@ namespace Managers.Network
 
         public bool TrySetColor(NetworkRunner runner, PlayerRef player, int colorId)
         {
-            if (runner == null || !runner.IsServer || !player.IsRealPlayer || !_waitingUsernames.ContainsKey(player))
+            if (!ColorAssignmentCoordinator.TrySetColor(runner, player, colorId))
                 return false;
 
-            if (_paddleColorPalette == null || !_paddleColorPalette.IsValidColorId(colorId))
-                return false;
-
-            foreach (var entry in _colorIds)
-            {
-                if (entry.Key != player && entry.Value == colorId)
-                    return false;
-            }
-
-            _colorIds[player] = colorId;
             PublishRoster(runner);
             return true;
         }
@@ -308,7 +299,7 @@ namespace Managers.Network
                 .ToArray();
             var activePlayerSet = new HashSet<PlayerRef>(activePlayers);
 
-            _waitingUsernames.Clear();
+            _lobbyMemberUsernames.Clear();
 
             var staleReadyPlayers = _readyPlayers.Keys
                 .Where(player => !activePlayerSet.Contains(player))
@@ -318,13 +309,30 @@ namespace Managers.Network
 
             foreach (var player in activePlayers)
             {
-                _waitingUsernames[player] = LobbyUsernameTokenUtility.ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
-
-                if (!_readyPlayers.ContainsKey(player))
-                    _readyPlayers[player] = false;
+                RegisterLobbyMember(runner, player);
             }
 
-            SynchronizeColorAssignments(runner);
+            ColorAssignmentCoordinator.SynchronizeColorAssignments(runner);
+        }
+
+        private void RegisterLobbyMember(NetworkRunner runner, PlayerRef player)
+        {
+            _lobbyMemberUsernames[player] = LobbyUsernameTokenUtility.ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
+
+            if (!_readyPlayers.ContainsKey(player))
+                _readyPlayers[player] = false;
+        }
+
+        private void RemoveLobbyMember(PlayerRef player)
+        {
+            _lobbyMemberUsernames.Remove(player);
+            _readyPlayers.Remove(player);
+            _colorIds.Remove(player);
+        }
+
+        private bool IsLobbyMember(PlayerRef player)
+        {
+            return _lobbyMemberUsernames.ContainsKey(player);
         }
 
         private void PublishRoster(NetworkRunner runner)
@@ -332,7 +340,7 @@ namespace Managers.Network
             if (_rosterState == null)
                 return;
 
-            var orderedEntries = _waitingUsernames.OrderBy(entry => entry.Key.PlayerId);
+            var orderedEntries = _lobbyMemberUsernames.OrderBy(entry => entry.Key.PlayerId);
             var targetPlayerCapacity = ResolveTargetPlayerCapacity(runner);
             var mode = TeamLaneAssignmentUtility.ResolveMode(targetPlayerCapacity);
             var orderedUsernames = new List<string>();
@@ -368,89 +376,9 @@ namespace Managers.Network
 
         private void ClearServerState()
         {
-            _waitingUsernames.Clear();
+            _lobbyMemberUsernames.Clear();
             _readyPlayers.Clear();
             _colorIds.Clear();
-        }
-
-        private void SynchronizeColorAssignments(NetworkRunner runner)
-        {
-            var activePlayers = runner.ActivePlayers
-                .OrderBy(player => player.PlayerId)
-                .ToArray();
-
-            var activePlayerSet = new HashSet<PlayerRef>(activePlayers);
-            var stalePlayers = _colorIds.Keys
-                .Where(player => !activePlayerSet.Contains(player))
-                .ToArray();
-
-            foreach (var player in stalePlayers)
-                _colorIds.Remove(player);
-
-            var claimedColorIds = new HashSet<int>();
-            foreach (var player in activePlayers)
-            {
-                if (_colorIds.TryGetValue(player, out var colorId)
-                    && IsColorClaimValidForPlayer(player, colorId)
-                    && claimedColorIds.Add(colorId))
-                {
-                    continue;
-                }
-
-                _colorIds.Remove(player);
-            }
-
-            foreach (var player in activePlayers)
-            {
-                if (_colorIds.ContainsKey(player))
-                    continue;
-
-                if (TryAssignRandomAvailableColor(runner, player))
-                    continue;
-
-                runner.Disconnect(player, null);
-            }
-        }
-
-        private bool TryAssignRandomAvailableColor(NetworkRunner runner, PlayerRef player)
-        {
-            if (runner == null || !runner.IsServer || !_waitingUsernames.ContainsKey(player))
-                return false;
-
-            if (_paddleColorPalette == null)
-                return false;
-
-            var availableColorIds = GetAvailableColorIds(_paddleColorPalette, player);
-            if (availableColorIds.Count == 0)
-                return false;
-
-            var selectedIndex = UnityEngine.Random.Range(0, availableColorIds.Count);
-            _colorIds[player] = availableColorIds[selectedIndex];
-            return true;
-        }
-
-        private List<int> GetAvailableColorIds(PaddleColorPalette palette, PlayerRef player)
-        {
-            var claimedColorIds = new HashSet<int>(_colorIds
-                .Where(entry => entry.Key != player)
-                .Select(entry => entry.Value));
-            var availableColorIds = new List<int>(palette.Count);
-
-            for (var colorId = 0; colorId < palette.Count; colorId++)
-            {
-                if (!claimedColorIds.Contains(colorId))
-                    availableColorIds.Add(colorId);
-            }
-
-            return availableColorIds;
-        }
-
-        private bool IsColorClaimValidForPlayer(PlayerRef player, int colorId)
-        {
-            if (!player.IsRealPlayer)
-                return false;
-
-            return _paddleColorPalette != null && _paddleColorPalette.IsValidColorId(colorId);
         }
 
         private void HandleRosterSnapshotChanged(LobbySessionSnapshot snapshot)

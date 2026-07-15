@@ -6,10 +6,11 @@ using Common;
 using Config;
 using Fusion;
 using Fusion.Sockets;
+using Lobby;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Managers.Network
+namespace Network
 {
     public sealed class DedicatedServerMatchFlow : INetworkRunnerCallbacks
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Common;
 using Fusion;
 using Helpers;
-using Managers.Network;
+using Network;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;

@@ -1,4 +1,4 @@
-namespace Managers.Network
+namespace Lobby.SessionSnapshot
 {
     public readonly struct TeamLaneAssignment
     {

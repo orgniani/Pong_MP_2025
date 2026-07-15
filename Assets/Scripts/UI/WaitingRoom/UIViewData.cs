@@ -1,7 +1,7 @@
 using System;
 using UnityEngine;
 
-namespace UI
+namespace UI.WaitingRoom
 {
     public sealed class UIViewData
     {

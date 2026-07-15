@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace Managers.Network
+namespace Lobby.SessionSnapshot
 {
     public readonly struct LobbyRosterData
     {

@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Fusion;
-using Managers.Network;
+using Network;
 
 namespace Managers
 {

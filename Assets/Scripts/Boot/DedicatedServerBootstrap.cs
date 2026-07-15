@@ -4,7 +4,8 @@ using System.Threading.Tasks;
 using Common;
 using Config;
 using Helpers;
-using Managers.Network;
+using Lobby;
+using Network;
 using UnityEngine;
 
 namespace Boot

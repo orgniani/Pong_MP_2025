@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using Fusion;
 
-namespace Managers.Network
+namespace Lobby
 {
     internal static class LobbyUsernameTokenUtility
     {

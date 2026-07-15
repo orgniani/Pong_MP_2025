@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using Common;
 using Fusion;
+using Lobby.SessionSnapshot;
 using UnityEngine;
 
-namespace Managers.Network
+namespace Lobby
 {
     public sealed class LobbyRosterState : NetworkBehaviour
     {

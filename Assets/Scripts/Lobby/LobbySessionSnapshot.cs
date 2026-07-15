@@ -1,6 +1,7 @@
 using System;
+using Lobby.SessionSnapshot;
 
-namespace Managers.Network
+namespace Lobby
 {
     public readonly struct LobbySessionSnapshot
     {

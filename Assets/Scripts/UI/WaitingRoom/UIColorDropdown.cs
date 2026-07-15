@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-namespace UI
+namespace UI.WaitingRoom
 {
     public sealed class UIColorDropdown : Selectable, IPointerClickHandler, ISubmitHandler, ICancelHandler
     {

@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Managers.Network
+namespace Lobby
 {
     [DisallowMultipleComponent]
     [RequireComponent(typeof(NetworkRunner))]

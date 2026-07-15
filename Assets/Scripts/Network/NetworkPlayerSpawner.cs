@@ -1,10 +1,11 @@
 using Fusion;
+using Lobby;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace Managers.Network
+namespace Network
 {
     public class NetworkPlayerSpawner
     {

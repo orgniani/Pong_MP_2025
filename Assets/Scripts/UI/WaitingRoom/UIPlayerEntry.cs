@@ -1,7 +1,7 @@
 using Helpers;
 using UnityEngine;
 
-namespace UI
+namespace UI.WaitingRoom
 {
     public abstract class UIPlayerEntry : MonoBehaviour
     {
