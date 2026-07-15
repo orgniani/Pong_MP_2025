@@ -101,7 +101,7 @@ namespace Managers.Network
             var args = new StartGameArgs()
             {
                 GameMode = GameMode.Client,
-                ConnectionToken = LobbySessionState.CreateConnectionToken(LocalPlayerSession.Username),
+                ConnectionToken = LobbyUsernameTokenUtility.CreateConnectionToken(LocalPlayerSession.Username),
                 SceneManager = GetOrAddSceneManager(runner),
                 SessionName = sessionName
             };

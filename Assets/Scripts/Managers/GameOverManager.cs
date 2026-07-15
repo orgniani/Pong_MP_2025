@@ -5,13 +5,6 @@ using Managers.Network;
 
 namespace Managers
 {
-    public enum GameOverReason
-    {
-        None,
-        TimerExpired,
-        PlayerDisconnected
-    }
-
     public class GameOverManager : NetworkBehaviour
     {
         [SerializeField] private float resultDisplaySeconds = 4f;

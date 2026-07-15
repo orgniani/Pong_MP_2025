@@ -4,13 +4,6 @@ namespace Managers.Network
 {
     public class MatchSessionState : MonoBehaviour
     {
-        private enum SessionLifecyclePhase
-        {
-            WaitingForPlayers,
-            MatchInProgress,
-            PostGameCleanup
-        }
-
         private SessionLifecyclePhase _phase = SessionLifecyclePhase.WaitingForPlayers;
 
         public bool MatchInProgress => _phase == SessionLifecyclePhase.MatchInProgress;

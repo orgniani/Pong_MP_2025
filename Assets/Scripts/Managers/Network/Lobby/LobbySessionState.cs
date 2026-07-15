@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using Common;
 using Config;
 using Fusion;
@@ -11,8 +10,6 @@ namespace Managers.Network
 {
     public sealed class LobbySessionState : MonoBehaviour
     {
-        private const string UsernameTokenPrefix = "lobby-username:";
-        private const string FallbackUsername = "Player";
         private static LobbySessionState _activeInstance;
         private static int _activationSequence;
         private NetworkRunner _runner;
@@ -87,17 +84,12 @@ namespace Managers.Network
             UnbindRosterState();
         }
 
-        public static byte[] CreateConnectionToken(string username)
-        {
-            return Encoding.UTF8.GetBytes(UsernameTokenPrefix + NormalizeUsername(username));
-        }
-
         public void HandlePlayerJoined(NetworkRunner runner, PlayerRef player)
         {
             if (runner == null || !runner.IsServer)
                 return;
 
-            _waitingUsernames[player] = ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
+            _waitingUsernames[player] = LobbyUsernameTokenUtility.ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
             _readyPlayers[player] = false;
 
             if (!TryAssignRandomAvailableColor(runner, player))
@@ -326,7 +318,7 @@ namespace Managers.Network
 
             foreach (var player in activePlayers)
             {
-                _waitingUsernames[player] = ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
+                _waitingUsernames[player] = LobbyUsernameTokenUtility.ResolveUsernameFromToken(runner.GetPlayerConnectionToken(player), player);
 
                 if (!_readyPlayers.ContainsKey(player))
                     _readyPlayers[player] = false;
@@ -354,7 +346,7 @@ namespace Managers.Network
             foreach (var entry in orderedEntries)
             {
                 var assignment = TeamLaneAssignmentUtility.ResolveAssignment(mode, slotIndex);
-                orderedUsernames.Add(NormalizeUsername(entry.Value));
+                orderedUsernames.Add(LobbyUsernameTokenUtility.NormalizeUsername(entry.Value));
                 orderedPlayerIds.Add(entry.Key.PlayerId);
                 orderedReadyStates.Add(_readyPlayers.TryGetValue(entry.Key, out var isReady) && isReady);
                 orderedTeamIds.Add(assignment.TeamId);
@@ -474,27 +466,5 @@ namespace Managers.Network
             return MatchModeExtensions.ToGamePlayerCount(runner.SessionInfo.MaxPlayers);
         }
 
-        private static string ResolveUsernameFromToken(byte[] token, PlayerRef player)
-        {
-            if (token == null || token.Length == 0)
-                return CreateFallbackPlayerName(player);
-
-            var rawValue = Encoding.UTF8.GetString(token);
-            if (rawValue.StartsWith(UsernameTokenPrefix, StringComparison.Ordinal))
-                rawValue = rawValue.Substring(UsernameTokenPrefix.Length);
-
-            var normalized = NormalizeUsername(rawValue);
-            return string.IsNullOrEmpty(normalized) ? CreateFallbackPlayerName(player) : normalized;
-        }
-
-        private static string NormalizeUsername(string username)
-        {
-            return string.IsNullOrWhiteSpace(username) ? FallbackUsername : username.Trim();
-        }
-
-        private static string CreateFallbackPlayerName(PlayerRef player)
-        {
-            return $"{FallbackUsername}_{player.PlayerId}";
-        }
     }
 }
