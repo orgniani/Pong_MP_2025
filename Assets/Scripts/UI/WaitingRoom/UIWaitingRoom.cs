@@ -38,14 +38,8 @@ namespace UI.WaitingRoom
 
         private static readonly UIViewData EmptyViewData = UIViewData.CreateEmpty();
         private LobbySessionState _lobbySessionState;
-        private readonly Dictionary<int, PlayerEntryInstance> _playerEntries = new();
+        private UIPlayerEntryRenderer _playerEntryRenderer;
         private PaddleColorPalette _paddleColorPalette;
-
-        private sealed class PlayerEntryInstance
-        {
-            public UIPlayerEntry entry;
-            public bool usesLocalPrefab;
-        }
 
         public UIViewData CurrentViewData { get; private set; } = EmptyViewData;
 
@@ -57,6 +51,7 @@ namespace UI.WaitingRoom
             ReferenceValidator.ValidateOptional(rightTeamParent, nameof(rightTeamParent), this);
             ReferenceValidator.ValidateOptional(waitingStatusText, nameof(waitingStatusText), this);
             ReferenceValidator.ValidateOptional(leaveButton, nameof(leaveButton), this);
+            _playerEntryRenderer = new UIPlayerEntryRenderer(this, playerEntryLocalPrefab, playerEntryDisplayPrefab, transform);
         }
 
         private void OnEnable()
@@ -256,105 +251,8 @@ namespace UI.WaitingRoom
 
         private void RefreshPlayerEntries(UIViewData viewData)
         {
-            if (playerEntryLocalPrefab == null && playerEntryDisplayPrefab == null)
-            {
-                ClearPlayerEntries();
-                return;
-            }
-
-            var activePlayerIds = new HashSet<int>();
-            RefreshTeamEntries(viewData.LeftTeamRows, viewData.ColorOptions, leftTeamParent, activePlayerIds);
-            RefreshTeamEntries(viewData.RightTeamRows, viewData.ColorOptions, rightTeamParent, activePlayerIds);
-            RemoveStaleEntries(activePlayerIds);
-        }
-
-        private void RefreshTeamEntries(UIViewData.PlayerRowViewData[] rows, UIViewData.ColorOptionViewData[] colorOptions, Transform parent, ISet<int> activePlayerIds)
-        {
-            var resolvedParent = parent != null ? parent : transform;
-            for (var i = 0; i < rows.Length; i++)
-            {
-                var row = rows[i];
-                if (!row.HasValue)
-                    continue;
-
-                var entry = GetOrCreatePlayerEntry(row.PlayerId, row.IsLocalPlayer, resolvedParent);
-                if (entry == null)
-                    continue;
-
-                if (entry.transform.parent != resolvedParent)
-                    entry.transform.SetParent(resolvedParent, false);
-
-                entry.transform.SetSiblingIndex(i);
-                if (row.IsLocalPlayer && entry is UIPlayerEntryLocal localEntry)
-                    localEntry.BindLocal(this, row, colorOptions, readyButtonLabel, readyLockedButtonLabel);
-                else
-                    entry.Bind(this, row, readyButtonLabel, readyLockedButtonLabel);
-
-                activePlayerIds.Add(row.PlayerId);
-            }
-        }
-
-        private UIPlayerEntry GetOrCreatePlayerEntry(int playerId, bool requiresLocalPrefab, Transform parent)
-        {
-            if (_playerEntries.TryGetValue(playerId, out var entryInstance))
-            {
-                if (entryInstance.entry == null)
-                {
-                    _playerEntries.Remove(playerId);
-                }
-                else if (entryInstance.usesLocalPrefab == requiresLocalPrefab)
-                {
-                    return entryInstance.entry;
-                }
-                else
-                {
-                    Destroy(entryInstance.entry.gameObject);
-                    _playerEntries.Remove(playerId);
-                }
-            }
-
-            var prefab = requiresLocalPrefab ? playerEntryLocalPrefab : playerEntryDisplayPrefab;
-            if (prefab == null)
-                return null;
-
-            var entry = Instantiate(prefab, parent != null ? parent : transform);
-            _playerEntries[playerId] = new PlayerEntryInstance
-            {
-                entry = entry,
-                usesLocalPrefab = requiresLocalPrefab
-            };
-
-            return entry;
-        }
-
-        private void RemoveStaleEntries(ISet<int> activePlayerIds)
-        {
-            var stalePlayerIds = new List<int>();
-            foreach (var entry in _playerEntries)
-            {
-                if (!activePlayerIds.Contains(entry.Key) || entry.Value == null || entry.Value.entry == null)
-                    stalePlayerIds.Add(entry.Key);
-            }
-
-            for (var i = 0; i < stalePlayerIds.Count; i++)
-            {
-                var playerId = stalePlayerIds[i];
-                if (_playerEntries.TryGetValue(playerId, out var entry) && entry != null && entry.entry != null)
-                    Destroy(entry.entry.gameObject);
-
-                _playerEntries.Remove(playerId);
-            }
-        }
-
-        private void ClearPlayerEntries()
-        {
-            foreach (var entry in _playerEntries.Values)
-            {
-                if (entry != null && entry.entry != null)
-                    Destroy(entry.entry.gameObject);
-            }
-
-            _playerEntries.Clear();
+            _playerEntryRenderer ??= new UIPlayerEntryRenderer(this, playerEntryLocalPrefab, playerEntryDisplayPrefab, transform);
+            _playerEntryRenderer.Render(viewData, leftTeamParent, rightTeamParent, readyButtonLabel, readyLockedButtonLabel);
         }
     }
 }

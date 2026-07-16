@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Common;
 using Fusion;
 using Helpers;
@@ -85,18 +86,10 @@ namespace UI
         {
             SetLoading(true);
 
-            var task = browserService.JoinLobbyAsync();
-            while (!task.IsCompleted)
-            {
-                yield return null;
-            }
+            var joinLobbyTask = browserService.JoinLobbyAsync();
+            yield return WaitForTask(joinLobbyTask);
 
             SetLoading(false);
-
-            if (task.Exception != null)
-            {
-                Debug.LogError(task.Exception, this);
-            }
         }
 
         private void HandleSessionsUpdated(IReadOnlyList<SessionInfo> sessions)
@@ -108,16 +101,10 @@ namespace UI
 
             for (var i = 0; i < sessions.Count; i++)
             {
-                var info = sessions[i];
-                if (!info.IsValid || info.MaxPlayers != targetMaxPlayers)
+                if (TryRenderSessionEntry(sessions[i], targetMaxPlayers))
                 {
-                    continue;
+                    shown++;
                 }
-
-                var entry = Instantiate(entryPrefab, contentRoot);
-                entry.Bind(info, _mode, OnEntryJoinClicked);
-                _spawnedEntries.Add(entry);
-                shown++;
             }
 
             Log($"Rendered {shown} session(s) for mode {_mode}.");
@@ -142,22 +129,27 @@ namespace UI
         {
             SetLoading(true);
 
-            var task = browserService.JoinSessionAsync(sessionName);
-            while (!task.IsCompleted)
-            {
-                yield return null;
-            }
+            var joinSessionTask = browserService.JoinSessionAsync(sessionName);
+            yield return WaitForTask(joinSessionTask);
 
-            if (task.Exception != null)
-            {
-                Debug.LogError(task.Exception, this);
-            }
-
-            var joined = task.Exception == null && task.Result;
+            var joined = joinSessionTask.Exception == null && joinSessionTask.Result;
             if (!joined)
             {
                 SetLoading(false);
             }
+        }
+
+        private bool TryRenderSessionEntry(SessionInfo info, int targetMaxPlayers)
+        {
+            if (!info.IsValid || info.MaxPlayers != targetMaxPlayers)
+            {
+                return false;
+            }
+
+            var entry = Instantiate(entryPrefab, contentRoot);
+            entry.Bind(info, _mode, OnEntryJoinClicked);
+            _spawnedEntries.Add(entry);
+            return true;
         }
 
         private void Subscribe()
@@ -185,6 +177,19 @@ namespace UI
             }
 
             _spawnedEntries.Clear();
+        }
+
+        private IEnumerator WaitForTask(Task task)
+        {
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            if (task.Exception != null)
+            {
+                Debug.LogError(task.Exception, this);
+            }
         }
 
         private void SetLoading(bool isLoading)
