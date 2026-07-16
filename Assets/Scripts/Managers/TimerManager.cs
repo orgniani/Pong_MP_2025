@@ -1,3 +1,4 @@
+using Config;
 using Fusion;
 using System;
 using System.Collections;
@@ -7,7 +8,6 @@ namespace Managers
 {
     public class TimerManager : NetworkBehaviour
     {
-        [SerializeField] private float matchDurationSeconds = 120f;
         [SerializeField] private bool enableLogs = false;
 
         [Networked] private float _remainingTime { get; set; }
@@ -23,7 +23,7 @@ namespace Managers
             if (!HasStateAuthority)
                 return;
 
-            _remainingTime = matchDurationSeconds;
+            _remainingTime = MatchRules.GetMatchDurationSeconds();
         }
 
         public override void FixedUpdateNetwork()
@@ -49,7 +49,7 @@ namespace Managers
 
         private IEnumerator CountdownCoroutine()
         {
-            yield return new WaitForSeconds(3f);
+            yield return new WaitForSeconds(MatchRules.GetCountdownSeconds());
             _timerRunning = true;
             _countdownCoroutine = null;
         }
@@ -71,7 +71,7 @@ namespace Managers
             }
 
             _timerRunning = false;
-            _remainingTime = matchDurationSeconds;
+            _remainingTime = MatchRules.GetMatchDurationSeconds();
         }
 
         private void Log(string message)

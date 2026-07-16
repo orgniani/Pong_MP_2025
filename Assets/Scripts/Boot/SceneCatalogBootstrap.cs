@@ -1,4 +1,5 @@
 using Config;
+using Helpers;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -11,11 +12,8 @@ namespace Boot
 
         private void Awake()
         {
-            if (sceneIndexCatalog == null)
-            {
-                Debug.LogError("[SceneCatalogBootstrap] SceneIndexCatalog is not assigned. Scene indexes will not resolve.", this);
+            if (!ReferenceValidator.Validate(sceneIndexCatalog, nameof(sceneIndexCatalog), this))
                 return;
-            }
 
             SceneCatalogRegistry.RegisterProvider(new SceneCatalogProvider(sceneIndexCatalog), this);
             ValidateConfiguredBuildIndexes(sceneIndexCatalog);

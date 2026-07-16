@@ -1,18 +1,36 @@
 using Fusion;
+using Helpers;
 using UnityEngine;
 
 namespace PowerUps
 {
     public class PowerUpSpawner : NetworkBehaviour
     {
+        [Header("Prefabs")]
         [SerializeField] private NetworkObject powerUpPrefab;
-        [SerializeField] private float spawnInterval = 10f;
+
+        [Header("References")]
         [SerializeField] private Transform[] spawnPoints;
+
+        [Header("Config")]
+        [SerializeField] private float spawnInterval = 10f;
 
         [Networked] private float _timer { get; set; }
         [Networked] private NetworkRNG _rng { get; set; }
         [Networked] private NetworkBehaviourId _activePowerUp { get; set; }
         [Networked] private int _lastSpawnIndex { get; set; }
+
+        private void Awake()
+        {
+            if (!ReferenceValidator.Validate(powerUpPrefab, nameof(powerUpPrefab), this))
+                return;
+
+            if (spawnPoints != null)
+            {
+                for (int i = 0; i < spawnPoints.Length; i++)
+                    ReferenceValidator.ValidateOptional(spawnPoints[i], $"spawnPoints[{i}]", this);
+            }
+        }
 
         public override void Spawned()
         {

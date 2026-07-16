@@ -1,7 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using Fusion;
-using Managers.Network;
+using Network;
 
 namespace Managers
 {
@@ -13,11 +13,15 @@ namespace Managers
         [Networked]
         private bool _isGameOver { get; set; }
 
+        [Networked]
+        private GameOverReason _reason { get; set; }
+
         private ScoreManager _scoreManager;
         private TimerManager _timerManager;
         private Balls.Ball _ball;
 
         public bool IsGameOver => _isGameOver;
+        public GameOverReason Reason => _reason;
 
         public override void Spawned()
         {
@@ -34,23 +38,24 @@ namespace Managers
 
             if (_timerManager != null && _timerManager.RemainingTime <= 0f)
             {
-                TriggerGameOver("Timer ran out");
+                TriggerGameOver(GameOverReason.TimerExpired);
                 return;
             }
 
         }
 
-        public void TriggerForfeit(string reason)
+        public void TriggerForfeit(GameOverReason reason)
         {
             TriggerGameOver(reason);
         }
 
-        private void TriggerGameOver(string reason)
+        private void TriggerGameOver(GameOverReason reason)
         {
             if (_isGameOver)
                 return;
 
             _isGameOver = true;
+            _reason = reason;
 
             if (_timerManager != null)
                 _timerManager.StopTimer();

@@ -1,3 +1,5 @@
+using Common;
+using Helpers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,16 +8,25 @@ namespace UI
 {
     public sealed class UIMainMenuController : MonoBehaviour
     {
+        [Header("Buttons")]
         [SerializeField] private Button play1v1Button;
         [SerializeField] private Button play2v2Button;
         [SerializeField] private Button creditsButton;
         [SerializeField] private Button closeCreditsButton;
         [SerializeField] private Button quitButton;
+
+        [Header("Text")]
         [SerializeField] private TMP_InputField usernameInputField;
+
+        [Header("References")]
         [SerializeField] private UISessionBrowser sessionBrowser;
+
+        [Header("Game objects")]
         [SerializeField] private GameObject creditsPanel;
         [SerializeField] private GameObject usernameValidationPanel;
-        private const int UsernameCharacterLimit = 16;
+
+        [Header("Settings")]
+        [SerializeField] private int usernameCharacterLimit = 10;
 
         public string Username => usernameInputField != null ? usernameInputField.text.Trim() : string.Empty;
 
@@ -27,7 +38,8 @@ namespace UI
                 return;
             }
 
-            usernameInputField.characterLimit = UsernameCharacterLimit;
+            usernameInputField.characterLimit = usernameCharacterLimit;
+            usernameInputField.onValidateInput = OnValidateUsernameInput;
             usernameInputField.SetTextWithoutNotify(Managers.LocalPlayerSession.Username);
 
             play1v1Button.onClick.AddListener(OnPlay1v1Clicked);
@@ -51,12 +63,17 @@ namespace UI
 
         private void OnPlay1v1Clicked()
         {
-            TryOpenSessionBrowser(UIGameModeFilter.OneVsOne);
+            TryOpenSessionBrowser(MatchMode.OneVsOne);
         }
 
         private void OnPlay2v2Clicked()
         {
-            TryOpenSessionBrowser(UIGameModeFilter.TwoVsTwo);
+            TryOpenSessionBrowser(MatchMode.TwoVsTwo);
+        }
+
+        private static char OnValidateUsernameInput(string text, int charIndex, char addedChar)
+        {
+            return char.IsLetterOrDigit(addedChar) ? addedChar : '\0';
         }
 
         private void OnUsernameValueChanged(string _)
@@ -90,19 +107,21 @@ namespace UI
 
         private bool ValidateReferences()
         {
-            var ok = true;
+            var ok = ReferenceValidator.Validate(play1v1Button, nameof(play1v1Button), this)
+                    & ReferenceValidator.Validate(play2v2Button, nameof(play2v2Button), this)
+                    & ReferenceValidator.Validate(creditsButton, nameof(creditsButton), this)
+                    & ReferenceValidator.Validate(quitButton, nameof(quitButton), this)
+                    & ReferenceValidator.Validate(usernameInputField, nameof(usernameInputField), this)
+                    & ReferenceValidator.Validate(sessionBrowser, nameof(sessionBrowser), this);
 
-            if (play1v1Button == null) { Debug.LogError("[UIMainMenuController] play1v1Button is not assigned.", this); ok = false; }
-            if (play2v2Button == null) { Debug.LogError("[UIMainMenuController] play2v2Button is not assigned.", this); ok = false; }
-            if (creditsButton == null) { Debug.LogError("[UIMainMenuController] creditsButton is not assigned.", this); ok = false; }
-            if (quitButton == null) { Debug.LogError("[UIMainMenuController] quitButton is not assigned.", this); ok = false; }
-            if (usernameInputField == null) { Debug.LogError("[UIMainMenuController] usernameInputField is not assigned.", this); ok = false; }
-            if (sessionBrowser == null) { Debug.LogError("[UIMainMenuController] sessionBrowser is not assigned.", this); ok = false; }
+            ReferenceValidator.ValidateOptional(closeCreditsButton, nameof(closeCreditsButton), this);
+            ReferenceValidator.ValidateOptional(creditsPanel, nameof(creditsPanel), this);
+            ReferenceValidator.ValidateOptional(usernameValidationPanel, nameof(usernameValidationPanel), this);
 
             return ok;
         }
 
-        private void TryOpenSessionBrowser(UIGameModeFilter gameModeFilter)
+        private void TryOpenSessionBrowser(MatchMode gameModeFilter)
         {
             if (string.IsNullOrWhiteSpace(Username))
             {

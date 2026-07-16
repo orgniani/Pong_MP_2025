@@ -1,7 +1,10 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
+using Common;
 using Fusion;
-using Managers.Network;
+using Helpers;
+using Network;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -10,19 +13,30 @@ namespace UI
 {
     public sealed class UISessionBrowser : MonoBehaviour
     {
+        [Header("References")]
         [SerializeField] private SessionBrowserService browserService;
-        [SerializeField] private GameObject panelRoot;
         [SerializeField] private Transform contentRoot;
+
+        [Header("Prefabs")]
         [SerializeField] private UISessionEntry entryPrefab;
+
+        [Header("Text")]
         [SerializeField] private TMP_Text headerText;
         [SerializeField] private TMP_Text emptyStateText;
+
+        [Header("Game objects")]
+        [SerializeField] private GameObject panelRoot;
+        [SerializeField] private GameObject loadingPanel;
+
+        [Header("Buttons")]
         [SerializeField] private Button refreshButton;
         [SerializeField] private Button backButton;
-        [SerializeField] private GameObject loadingPanel;
+
+        [Header("Config")]
         [SerializeField] private bool enableLogs = false;
 
         private readonly List<UISessionEntry> _spawnedEntries = new List<UISessionEntry>();
-        private UIGameModeFilter _mode;
+        private MatchMode _mode;
         private bool _subscribed;
 
         private void Awake()
@@ -39,14 +53,14 @@ namespace UI
             if (panelRoot != null) panelRoot.SetActive(false);
         }
 
-        public void Open(UIGameModeFilter mode)
+        public void Open(MatchMode mode)
         {
             _mode = mode;
 
             if (panelRoot != null) panelRoot.SetActive(true);
             if (headerText != null)
             {
-                headerText.text = _mode == UIGameModeFilter.OneVsOne
+                headerText.text = _mode == MatchMode.OneVsOne
                     ? "Available 1 vs 1 matches"
                     : "Available 2 vs 2 matches";
             }
@@ -72,18 +86,10 @@ namespace UI
         {
             SetLoading(true);
 
-            var task = browserService.JoinLobbyAsync();
-            while (!task.IsCompleted)
-            {
-                yield return null;
-            }
+            var joinLobbyTask = browserService.JoinLobbyAsync();
+            yield return WaitForTask(joinLobbyTask);
 
             SetLoading(false);
-
-            if (task.Exception != null)
-            {
-                Debug.LogError(task.Exception, this);
-            }
         }
 
         private void HandleSessionsUpdated(IReadOnlyList<SessionInfo> sessions)
@@ -95,16 +101,10 @@ namespace UI
 
             for (var i = 0; i < sessions.Count; i++)
             {
-                var info = sessions[i];
-                if (!info.IsValid || info.MaxPlayers != targetMaxPlayers)
+                if (TryRenderSessionEntry(sessions[i], targetMaxPlayers))
                 {
-                    continue;
+                    shown++;
                 }
-
-                var entry = Instantiate(entryPrefab, contentRoot);
-                entry.Bind(info, _mode, OnEntryJoinClicked);
-                _spawnedEntries.Add(entry);
-                shown++;
             }
 
             Log($"Rendered {shown} session(s) for mode {_mode}.");
@@ -129,22 +129,27 @@ namespace UI
         {
             SetLoading(true);
 
-            var task = browserService.JoinSessionAsync(sessionName);
-            while (!task.IsCompleted)
-            {
-                yield return null;
-            }
+            var joinSessionTask = browserService.JoinSessionAsync(sessionName);
+            yield return WaitForTask(joinSessionTask);
 
-            if (task.Exception != null)
-            {
-                Debug.LogError(task.Exception, this);
-            }
-
-            var joined = task.Exception == null && task.Result;
+            var joined = joinSessionTask.Exception == null && joinSessionTask.Result;
             if (!joined)
             {
                 SetLoading(false);
             }
+        }
+
+        private bool TryRenderSessionEntry(SessionInfo info, int targetMaxPlayers)
+        {
+            if (!info.IsValid || info.MaxPlayers != targetMaxPlayers)
+            {
+                return false;
+            }
+
+            var entry = Instantiate(entryPrefab, contentRoot);
+            entry.Bind(info, _mode, OnEntryJoinClicked);
+            _spawnedEntries.Add(entry);
+            return true;
         }
 
         private void Subscribe()
@@ -174,6 +179,19 @@ namespace UI
             _spawnedEntries.Clear();
         }
 
+        private IEnumerator WaitForTask(Task task)
+        {
+            while (!task.IsCompleted)
+            {
+                yield return null;
+            }
+
+            if (task.Exception != null)
+            {
+                Debug.LogError(task.Exception, this);
+            }
+        }
+
         private void SetLoading(bool isLoading)
         {
             if (loadingPanel != null) loadingPanel.SetActive(isLoading);
@@ -181,13 +199,16 @@ namespace UI
 
         private bool ValidateReferences()
         {
-            var ok = true;
+            var ok = ReferenceValidator.Validate(browserService, nameof(browserService), this)
+                    & ReferenceValidator.Validate(contentRoot, nameof(contentRoot), this)
+                    & ReferenceValidator.Validate(entryPrefab, nameof(entryPrefab), this)
+                    & ReferenceValidator.Validate(refreshButton, nameof(refreshButton), this)
+                    & ReferenceValidator.Validate(backButton, nameof(backButton), this);
 
-            if (browserService == null) { Debug.LogError("[UISessionBrowser] browserService is not assigned.", this); ok = false; }
-            if (contentRoot == null) { Debug.LogError("[UISessionBrowser] contentRoot is not assigned.", this); ok = false; }
-            if (entryPrefab == null) { Debug.LogError("[UISessionBrowser] entryPrefab is not assigned.", this); ok = false; }
-            if (refreshButton == null) { Debug.LogError("[UISessionBrowser] refreshButton is not assigned.", this); ok = false; }
-            if (backButton == null) { Debug.LogError("[UISessionBrowser] backButton is not assigned.", this); ok = false; }
+            ReferenceValidator.ValidateOptional(panelRoot, nameof(panelRoot), this);
+            ReferenceValidator.ValidateOptional(headerText, nameof(headerText), this);
+            ReferenceValidator.ValidateOptional(emptyStateText, nameof(emptyStateText), this);
+            ReferenceValidator.ValidateOptional(loadingPanel, nameof(loadingPanel), this);
 
             return ok;
         }

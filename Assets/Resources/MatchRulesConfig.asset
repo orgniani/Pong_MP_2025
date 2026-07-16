@@ -12,5 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4e6ab0528a20ae04a81b05918da79a41, type: 3}
   m_Name: MatchRulesConfig
   m_EditorClassIdentifier: 
-  minPlayersToStart: 2
-  maxPlayers: 4
+  countdownSeconds: 3
+  dedicatedServerSlots: 1
+  matchDurationSeconds: 240

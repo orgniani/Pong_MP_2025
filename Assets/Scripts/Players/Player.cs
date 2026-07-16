@@ -1,5 +1,7 @@
 using System;
+using Config;
 using Fusion;
+using Helpers;
 using Managers;
 using UnityEngine;
 
@@ -8,12 +10,20 @@ namespace Players
     [RequireComponent(typeof(Collider2D))]
     public class Player : NetworkBehaviour
     {
+        [Header("Config")]
         [SerializeField] private float speed = 8f;
         [SerializeField] private float arenaBoundX = 4f;
         [SerializeField] private float sizeAnimationDuration = 0.2f;
         [SerializeField] private AnimationCurve sizeAnimationCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+        [SerializeField] private PaddleColorPalette paddleColorPalette;
+
+        [Header("References")]
+        [SerializeField] private SpriteRenderer viewRenderer;
 
         [Networked] private int _spawnPointIndex { get; set; }
+        [Networked] private int _teamId { get; set; }
+        [Networked] private int _laneId { get; set; }
+        [Networked] private int _colorId { get; set; } = -1;
         [Networked] private NetworkString<_16> _username { get; set; }
         [Networked] private float _sizeMultiplier { get; set; } = 1f;
         [Networked] private float _sizeEffectTimer { get; set; } = 0f;
@@ -26,6 +36,20 @@ namespace Players
 
         public string Username => _username.ToString();
         public float SizeMultiplier => _sizeMultiplier;
+        public int TeamId => _teamId;
+        public int LaneId => _laneId;
+        public int ColorId => _colorId;
+
+        public void SetTeamLane(int teamId, int laneId)
+        {
+            _teamId = teamId;
+            _laneId = laneId;
+        }
+
+        public void SetColorId(int colorId)
+        {
+            _colorId = colorId;
+        }
 
         public static event Action OnAnyUsernameChanged;
 
@@ -42,6 +66,8 @@ namespace Players
         private void Awake()
         {
             _capsuleCollider = GetComponent<CapsuleCollider2D>();
+            ReferenceValidator.ValidateOptional(paddleColorPalette, nameof(paddleColorPalette), this);
+            ReferenceValidator.ValidateOptional(viewRenderer, nameof(viewRenderer), this);
         }
 
         public override void Spawned()
@@ -49,6 +75,7 @@ namespace Players
             _changes = GetChangeDetector(ChangeDetector.Source.SimulationState);
 
             TryAttachToSpawnPoint();
+            RefreshColorVisual();
 
             if (Object.HasInputAuthority)
                 RPC_SetUsername(LocalPlayerSession.Username);
@@ -60,6 +87,9 @@ namespace Players
             {
                 if (change == nameof(_username))
                     OnAnyUsernameChanged?.Invoke();
+
+                if (change == nameof(_colorId))
+                    RefreshColorVisual();
             }
         }
 
@@ -244,6 +274,21 @@ namespace Players
             _baseLocalScale = transform.localScale;
             ResolveMovementAreaRenderer();
             SnapSize(SizeMultiplier);
+            RefreshColorVisual();
+        }
+
+        private void RefreshColorVisual()
+        {
+            if (viewRenderer == null)
+                return;
+
+            if (paddleColorPalette == null)
+            {
+                viewRenderer.color = Color.white;
+                return;
+            }
+
+            viewRenderer.color = paddleColorPalette.ResolveColor(_colorId);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

@@ -1,5 +1,7 @@
 using System;
+using Common;
 using Fusion;
+using Helpers;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -8,20 +10,31 @@ namespace UI
 {
     public sealed class UISessionEntry : MonoBehaviour
     {
+        [Header("Text")]
         [SerializeField] private TMP_Text sessionNameText;
         [SerializeField] private TMP_Text modeText;
         [SerializeField] private TMP_Text occupancyText;
+
+        [Header("Buttons")]
         [SerializeField] private Button joinButton;
 
         private string _sessionName;
         private Action<string> _onJoin;
 
-        public void Bind(SessionInfo info, UIGameModeFilter mode, Action<string> onJoin)
+        private void Awake()
+        {
+            ReferenceValidator.ValidateOptional(sessionNameText, nameof(sessionNameText), this);
+            ReferenceValidator.ValidateOptional(modeText, nameof(modeText), this);
+            ReferenceValidator.ValidateOptional(occupancyText, nameof(occupancyText), this);
+            ReferenceValidator.ValidateOptional(joinButton, nameof(joinButton), this);
+        }
+
+        public void Bind(SessionInfo info, MatchMode mode, Action<string> onJoin)
         {
             _sessionName = info.Name;
             _onJoin = onJoin;
 
-            var gamePlayers = UIGameModeFilterExtensions.ToGamePlayerCount(info.PlayerCount);
+            var gamePlayers = MatchModeExtensions.ToGamePlayerCount(info.PlayerCount);
             var gameCapacity = mode.ToMaxPlayers();
 
             if (sessionNameText != null) sessionNameText.text = info.Name;

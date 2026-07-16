@@ -255,6 +255,8 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+  paddleColorPalette: {fileID: 11400000, guid: 7ac1d8e2fe3b4ea5a98481543f2c0b72, type: 2}
+  viewRenderer: {fileID: 5909626989090396162}
 --- !u!114 &1614281035363704909
 MonoBehaviour:
   m_ObjectHideFlags: 0
