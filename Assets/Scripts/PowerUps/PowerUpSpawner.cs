@@ -1,3 +1,4 @@
+using Config;
 using Fusion;
 using Helpers;
 using UnityEngine;
@@ -14,11 +15,14 @@ namespace PowerUps
 
         [Header("Config")]
         [SerializeField] private float spawnInterval = 10f;
+        [SerializeField] private PowerUpDefinition[] powerUpDefinitions;
 
         [Networked] private float _timer { get; set; }
         [Networked] private NetworkRNG _rng { get; set; }
         [Networked] private NetworkBehaviourId _activePowerUp { get; set; }
         [Networked] private int _lastSpawnIndex { get; set; }
+
+        private bool _hasAnyValidDefinition;
 
         private void Awake()
         {
@@ -30,6 +34,23 @@ namespace PowerUps
                 for (int i = 0; i < spawnPoints.Length; i++)
                     ReferenceValidator.ValidateOptional(spawnPoints[i], $"spawnPoints[{i}]", this);
             }
+
+            if (powerUpDefinitions != null)
+            {
+                for (int i = 0; i < powerUpDefinitions.Length; i++)
+                {
+                    ReferenceValidator.ValidateOptional(powerUpDefinitions[i], $"powerUpDefinitions[{i}]", this);
+                    if (powerUpDefinitions[i] != null)
+                        _hasAnyValidDefinition = true;
+                }
+            }
+
+            if (powerUpDefinitions == null || powerUpDefinitions.Length == 0)
+                Debug.LogError("[PowerUpSpawner] No power-up definitions are assigned. Spawning and replicated visual resolution will fail.", this);
+            else if (!_hasAnyValidDefinition)
+                Debug.LogError("[PowerUpSpawner] Power-up definitions list contains no valid entries. Spawning and replicated visual resolution will fail.", this);
+
+            PowerUpDefinitionRegistry.RegisterProvider(new PowerUpDefinitionProvider(powerUpDefinitions, this), this);
         }
 
         public override void Spawned()
@@ -48,9 +69,14 @@ namespace PowerUps
             _timer += Runner.DeltaTime;
             if (_timer < spawnInterval) return;
 
-            _timer = 0f;
-
             var rng = _rng;
+            if (!TryGetRandomDefinition(ref rng, out var definition))
+            {
+                _rng = rng;
+                return;
+            }
+
+            _timer = 0f;
             int index = GetSpawnPointIndex(ref rng);
             _rng = rng;
             _lastSpawnIndex = index;
@@ -61,6 +87,7 @@ namespace PowerUps
             if (spawned.TryGetBehaviour(out PowerUp powerUp))
             {
                 powerUp.SetSpawner(this);
+                powerUp.Initialize(definition);
                 _activePowerUp = powerUp.Id;
             }
         }
@@ -84,6 +111,41 @@ namespace PowerUps
                 index += 1;
 
             return index;
+        }
+
+        private bool TryGetRandomDefinition(ref NetworkRNG rng, out PowerUpDefinition definition)
+        {
+            definition = null;
+
+            if (powerUpDefinitions == null || powerUpDefinitions.Length == 0)
+                return false;
+
+            int validCount = 0;
+            for (int i = 0; i < powerUpDefinitions.Length; i++)
+            {
+                if (powerUpDefinitions[i] != null)
+                    validCount += 1;
+            }
+
+            if (validCount == 0)
+                return false;
+
+            int selectedIndex = rng.RangeInclusive(0, validCount - 1);
+            for (int i = 0; i < powerUpDefinitions.Length; i++)
+            {
+                if (powerUpDefinitions[i] == null)
+                    continue;
+
+                if (selectedIndex == 0)
+                {
+                    definition = powerUpDefinitions[i];
+                    return true;
+                }
+
+                selectedIndex -= 1;
+            }
+
+            return false;
         }
     }
 }

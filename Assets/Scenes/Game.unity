@@ -1935,6 +1935,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   powerUpPrefab: {fileID: 5727173546220971723, guid: 12f57349e05dbdf48850721834c84b16, type: 3}
+  powerUpDefinitions:
+  - {fileID: 11400000, guid: ffdb71339b374b558601c204b3f6632f, type: 2}
+  - {fileID: 11400000, guid: 982f346a6a1d4ecbbad044a4c176b240, type: 2}
+  - {fileID: 11400000, guid: c714f95e2275452785bef9b01d1822b7, type: 2}
   spawnPoints:
   - {fileID: 568968257}
   - {fileID: 267535170}

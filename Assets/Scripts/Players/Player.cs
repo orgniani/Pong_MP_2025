@@ -27,6 +27,9 @@ namespace Players
         [Networked] private NetworkString<_16> _username { get; set; }
         [Networked] private float _sizeMultiplier { get; set; } = 1f;
         [Networked] private float _sizeEffectTimer { get; set; } = 0f;
+        [Networked] private int _sizeEffectState { get; set; }
+        [Networked] private float _speedMultiplier { get; set; } = 1f;
+        [Networked] private float _speedEffectTimer { get; set; } = 0f;
 
         public int SpawnPointIndex
         {
@@ -36,6 +39,7 @@ namespace Players
 
         public string Username => _username.ToString();
         public float SizeMultiplier => _sizeMultiplier;
+        public float SpeedMultiplier => _speedMultiplier;
         public int TeamId => _teamId;
         public int LaneId => _laneId;
         public int ColorId => _colorId;
@@ -107,7 +111,7 @@ namespace Players
             if (GetInput<PlayerInputData>(out var input))
             {
                 Vector3 localPos = transform.localPosition;
-                localPos.x -= input.MoveY * speed * Runner.DeltaTime;
+                localPos.x -= input.MoveY * speed * SpeedMultiplier * Runner.DeltaTime;
                 float localHalfExtent = GetLocalHalfExtentAlongParentX();
                 localPos.x = Mathf.Clamp(localPos.x, GetMinAllowedX(localHalfExtent), GetMaxAllowedX(localHalfExtent));
                 transform.localPosition = localPos;
@@ -118,9 +122,15 @@ namespace Players
                 _sizeEffectTimer -= Runner.DeltaTime;
                 if (_sizeEffectTimer <= 0f)
                 {
-                    _sizeEffectTimer = 0f;
-                    _sizeMultiplier = 1f;
+                    ResetSizeEffect();
                 }
+            }
+
+            if (_speedEffectTimer > 0f)
+            {
+                _speedEffectTimer -= Runner.DeltaTime;
+                if (_speedEffectTimer <= 0f)
+                    ResetSpeedEffect();
             }
         }
 
@@ -144,10 +154,57 @@ namespace Players
 
         public void ApplySizeBoost(float multiplier, float duration)
         {
-            if (!Object.HasStateAuthority) return;
+            ApplySizeEffect(SizeEffectState.Boosted, Mathf.Max(1f, multiplier), duration);
+        }
+
+        public void ApplySizeShrink(float multiplier, float duration)
+        {
+            ApplySizeEffect(SizeEffectState.Shrunk, Mathf.Clamp(multiplier, 0.01f, 1f), duration);
+        }
+
+        public void ApplySpeedBoost(float multiplier, float duration)
+        {
+            if (!Object.HasStateAuthority)
+                return;
+
+            _speedMultiplier = Mathf.Max(1f, multiplier);
+            _speedEffectTimer = Mathf.Max(0.01f, duration);
+        }
+
+        private void ApplySizeEffect(SizeEffectState nextState, float multiplier, float duration)
+        {
+            if (!Object.HasStateAuthority)
+                return;
+
+            if (nextState == SizeEffectState.None)
+            {
+                ResetSizeEffect();
+                return;
+            }
+
+            var currentState = (SizeEffectState)_sizeEffectState;
+            if (currentState != SizeEffectState.None && currentState != nextState)
+            {
+                ResetSizeEffect();
+                return;
+            }
 
             _sizeMultiplier = multiplier;
-            _sizeEffectTimer = duration;
+            _sizeEffectTimer = Mathf.Max(0.01f, duration);
+            _sizeEffectState = (int)nextState;
+        }
+
+        private void ResetSizeEffect()
+        {
+            _sizeEffectState = (int)SizeEffectState.None;
+            _sizeMultiplier = 1f;
+            _sizeEffectTimer = 0f;
+        }
+
+        private void ResetSpeedEffect()
+        {
+            _speedMultiplier = 1f;
+            _speedEffectTimer = 0f;
         }
 
         private void StartSizeAnimation(float targetMultiplier)
@@ -298,5 +355,12 @@ namespace Players
             ApplySizeBoost(1.5f, 5f);
         }
 #endif
+
+        private enum SizeEffectState
+        {
+            None = 0,
+            Boosted = 1,
+            Shrunk = 2
+        }
     }
 }
