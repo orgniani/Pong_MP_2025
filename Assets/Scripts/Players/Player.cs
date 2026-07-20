@@ -100,7 +100,11 @@ namespace Players
         [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority)]
         private void RPC_SetUsername(NetworkString<_16> username)
         {
-            _username = username;
+            var trimmed = username.ToString().Trim();
+            if (string.IsNullOrEmpty(trimmed))
+                return;
+
+            _username = trimmed;
         }
 
         public override void FixedUpdateNetwork()
@@ -143,13 +147,6 @@ namespace Players
                 StartSizeAnimation(SizeMultiplier);
 
             UpdateSizeAnimation();
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (Input.GetKeyDown(KeyCode.Alpha2))
-            {
-                RPC_DebugApplySizeBoost();
-            }
-#endif
         }
 
         public void ApplySizeBoost(float multiplier, float duration)
@@ -347,14 +344,6 @@ namespace Players
 
             viewRenderer.color = paddleColorPalette.ResolveColor(_colorId);
         }
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        private void RPC_DebugApplySizeBoost()
-        {
-            ApplySizeBoost(1.5f, 5f);
-        }
-#endif
 
         private enum SizeEffectState
         {

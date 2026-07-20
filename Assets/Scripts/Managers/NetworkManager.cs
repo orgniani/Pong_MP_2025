@@ -28,10 +28,6 @@ namespace Managers
         [SerializeField] private NetworkPrefabRef scoreManagerPrefab;
         [SerializeField] private NetworkPrefabRef gameOverManagerPrefab;
 
-        [Header("Settings")]
-        [SerializeField] private MatchRulesConfig matchRulesConfig;
-        [SerializeField] private bool enableLogs = false;
-
         private ScoreManager _scoreManager;
         private TimerManager _timerManager;
         private GameOverManager _gameOverManager;
@@ -50,10 +46,6 @@ namespace Managers
 
         private void Awake()
         {
-            ReferenceValidator.ValidateOptional(matchRulesConfig, nameof(matchRulesConfig), this);
-            if (matchRulesConfig != null)
-                MatchRulesRegistry.RegisterProvider(new MatchRulesProvider(matchRulesConfig), this);
-
             ReferenceValidator.ValidateOptional(oneVsOneSpawnPoints, nameof(oneVsOneSpawnPoints), this);
             ReferenceValidator.ValidateOptional(twoVsTwoSpawnPoints, nameof(twoVsTwoSpawnPoints), this);
 
@@ -173,7 +165,6 @@ namespace Managers
             var matchSessionState = runner.GetComponent<MatchSessionState>();
             if (matchSessionState != null && matchSessionState.IsPostGameCleanup)
             {
-                Log($"cleanup join rejected: player={player.PlayerId}, session='{runner.SessionInfo.Name}'");
                 runner.Disconnect(player, null);
                 return;
             }
@@ -229,8 +220,6 @@ namespace Managers
 
         void INetworkRunnerCallbacks.OnConnectedToServer(NetworkRunner runner)
         {
-            Log($"connected: mode={runner.GameMode}, session='{runner.SessionInfo.Name}'");
-
             if (_networkRunner.IsClient)
                 OnConnected?.Invoke();
         }
@@ -343,7 +332,6 @@ namespace Managers
 
             foreach (var player in runner.ActivePlayers.ToArray())
             {
-                Log($"disconnecting player={player.PlayerId} during post-game cleanup");
                 runner.Disconnect(player, null);
             }
         }
@@ -501,14 +489,6 @@ namespace Managers
             return twoVsTwoSpawnPoints != null && twoVsTwoSpawnPoints.Length >= MatchModeExtensions.TwoVsTwoMaxPlayers
                 ? MatchMode.TwoVsTwo
                 : MatchMode.OneVsOne;
-        }
-
-        private void Log(string message)
-        {
-            if (!enableLogs)
-                return;
-
-            Debug.Log($"{LogPrefix} {message}", this);
         }
 
         private static bool IsGameSceneActive()

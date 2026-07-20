@@ -32,9 +32,6 @@ namespace UI
         [SerializeField] private Button refreshButton;
         [SerializeField] private Button backButton;
 
-        [Header("Config")]
-        [SerializeField] private bool enableLogs = false;
-
         private readonly List<UISessionEntry> _spawnedEntries = new List<UISessionEntry>();
         private MatchMode _mode;
         private bool _subscribed;
@@ -106,8 +103,6 @@ namespace UI
                     shown++;
                 }
             }
-
-            Log($"Rendered {shown} session(s) for mode {_mode}.");
 
             var isEmpty = shown == 0;
             if (emptyStateText != null)
@@ -225,10 +220,5 @@ namespace UI
             if (backButton != null) backButton.onClick.RemoveListener(Close);
         }
 
-        private void Log(string message)
-        {
-            if (!enableLogs) return;
-            Debug.Log($"[{GetType().Name}] {message}", this);
-        }
     }
 }

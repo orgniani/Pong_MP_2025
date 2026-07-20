@@ -8,7 +8,6 @@ namespace Managers
     public class GameOverManager : NetworkBehaviour
     {
         [SerializeField] private float resultDisplaySeconds = 4f;
-        [SerializeField] private bool enableLogs = false;
 
         [Networked]
         private bool _isGameOver { get; set; }
@@ -63,8 +62,6 @@ namespace Managers
             _ball ??= FindFirstObjectByType<Balls.Ball>();
             _ball?.StopImmediately();
 
-            Log($"Game over triggered! Reason: {reason}");
-
             if (Object.HasStateAuthority)
                 StartCoroutine(ReturnToLobbyAfterDelay());
         }
@@ -86,14 +83,6 @@ namespace Managers
             NetworkManager.Instance?.ForceDisconnectAllPlayers(Runner);
 
             Runner.Despawn(Object);
-        }
-
-        private void Log(string message)
-        {
-            if (!enableLogs)
-                return;
-
-            Debug.Log($"[{GetType().Name}] {message}", this);
         }
     }
 }

@@ -13,9 +13,6 @@ namespace Boot
     public class DedicatedServerBootstrap : MonoBehaviour
     {
         [SerializeField] private MatchRulesConfig matchRulesConfig;
-#if UNITY_EDITOR
-        [SerializeField] private bool allowNonHeadlessStartInEditor = true;
-#endif
         [SerializeField] private float restartDelaySec = 2f;
 
         private const string SessionPrefix = "PongServer";
@@ -31,7 +28,6 @@ namespace Boot
         {
             if (!ShouldStartDedicatedServer())
             {
-                Debug.Log($"DedicatedServerBootstrap skipped: missing dedicated/headless requirements. batchMode={Application.isBatchMode}");
                 return;
             }
 
@@ -47,7 +43,6 @@ namespace Boot
             while (true)
             {
                 await RunServerSession(options, lobbySceneIndex);
-                Debug.Log($"[DedicatedServerBootstrap] Session ended. Restarting in {restartDelaySec}s...");
                 await Task.Delay(TimeSpan.FromSeconds(restartDelaySec));
             }
         }
@@ -113,22 +108,7 @@ namespace Boot
 
         private bool ShouldStartDedicatedServer()
         {
-            if (!DedicatedServerEnvironment.HasDedicatedFlag())
-            {
-                Debug.Log("DedicatedServerBootstrap requires '-dedicated' or '-dedicatedServer' flag to start server mode.");
-                return false;
-            }
-
-#if UNITY_EDITOR
-            if (allowNonHeadlessStartInEditor)
-            {
-                return true;
-            }
-
-            return DedicatedServerEnvironment.IsHeadless;
-#else
-            return DedicatedServerEnvironment.IsHeadless;
-#endif
+            return DedicatedServerEnvironment.HasDedicatedFlag() && DedicatedServerEnvironment.IsHeadless;
         }
 
         private static string GetArgumentValue(string[] args, string key)

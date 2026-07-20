@@ -12,7 +12,6 @@ namespace Balls
     public class Ball : NetworkBehaviour
     {
         [Header("Config")]
-        [SerializeField] private MatchRulesConfig matchRulesConfig;
         [SerializeField] private float startingSpeed = 5f;
         [SerializeField] private float minBounceAngle = 15f;
         [SerializeField] private float speedIncreasePerSecond = 0.2f;
@@ -46,8 +45,6 @@ namespace Balls
             _ballBounce.Initialize(_rb, minBounceAngle);
             _ballGoal.Initialize(_rb, leftBoundX, rightBoundX);
             _ballSpeed.Initialize(_rb, startingSpeed, speedIncreasePerSecond);
-
-            if (!ReferenceValidator.Validate(matchRulesConfig, nameof(matchRulesConfig), this)) return;
         }
 
         public override void Spawned()
@@ -60,7 +57,7 @@ namespace Balls
             _isStopped = false;
             _rb.position = Vector2.zero;
             _rb.linearVelocity = Vector2.zero;
-            _launchTimer = TickTimer.CreateFromSeconds(Runner, matchRulesConfig.CountdownSeconds);
+            _launchTimer = TickTimer.CreateFromSeconds(Runner, MatchRules.GetCountdownSeconds());
         }
 
         public override void FixedUpdateNetwork()

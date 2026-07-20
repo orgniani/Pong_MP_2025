@@ -10,8 +10,6 @@ namespace Network
 {
     public sealed class SessionBrowserService : MonoBehaviour, INetworkRunnerCallbacks
     {
-        [SerializeField] private bool enableLogs = false;
-
         public event Action<IReadOnlyList<SessionInfo>> OnSessionsUpdated;
         public event Action<bool> OnLobbyJoined;
 
@@ -26,7 +24,6 @@ namespace Network
         {
             if (_isBusy)
             {
-                Log("JoinLobby ignored: a runner operation is already in progress.");
                 return false;
             }
 
@@ -39,7 +36,6 @@ namespace Network
                 _lobbyRunner.AddCallbacks(this);
 
                 var ok = await _sessionHandler.JoinLobbyAsync(_lobbyRunner, lobby);
-                Log($"JoinLobby ok={ok}");
 
                 if (!ok)
                 {
@@ -65,7 +61,6 @@ namespace Network
 
             if (_isBusy)
             {
-                Log("JoinSession ignored: a runner operation is already in progress.");
                 return false;
             }
 
@@ -78,7 +73,6 @@ namespace Network
                 LobbyRunnerCallbacks.EnsureOnRunner(gameRunner);
 
                 var ok = await _sessionHandler.StartClient(gameRunner, sessionName);
-                Log($"JoinSession '{sessionName}' ok={ok}");
 
                 if (!ok && gameRunner != null && gameRunner.gameObject != null)
                 {
@@ -145,12 +139,6 @@ namespace Network
             _lobbyRunner = null;
         }
 
-        private void Log(string message)
-        {
-            if (!enableLogs) return;
-            Debug.Log($"[{GetType().Name}] {message}", this);
-        }
-
         public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList)
         {
             _sessions.Clear();
@@ -159,7 +147,6 @@ namespace Network
                 _sessions.AddRange(sessionList);
             }
 
-            Log($"Session list updated: {_sessions.Count} session(s) in lobby='{runner.LobbyInfo.Name}' region='{runner.LobbyInfo.Region}'.");
             OnSessionsUpdated?.Invoke(_sessions);
         }
 

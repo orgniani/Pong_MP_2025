@@ -54,7 +54,6 @@ namespace Network
                 Debug.LogWarning($"{LogPrefix} region override requested for '{region}', but this Fusion version does not expose a writable FixedRegion path.");
 
             var result = await runner.StartGame(args);
-            Debug.Log($"{LogPrefix} server start ok={result.Ok}, session='{sessionName}', sceneBuildIndex={buildIndex}, maxPlayers={maxPlayers}, region='{region ?? "auto"}', port={(port.HasValue ? requestedPort.ToString() : "default")}");
             return result.Ok;
         }
 
@@ -97,8 +96,6 @@ namespace Network
             runner.ProvideInput = true;
             var sessionName = string.IsNullOrWhiteSpace(serverName) ? DefaultSessionName : serverName;
 
-            Debug.Log($"{LogPrefix} client connecting: session='{sessionName}'");
-
             var args = new StartGameArgs()
             {
                 GameMode = GameMode.Client,
@@ -108,7 +105,6 @@ namespace Network
             };
 
             var result = await runner.StartGame(args);
-            Debug.Log($"{LogPrefix} client connect ok={result.Ok}, session='{sessionName}'");
             return result.Ok;
         }
 
@@ -116,11 +112,8 @@ namespace Network
         {
             runner.ProvideInput = false;
 
-            Debug.Log($"{LogPrefix} joining session lobby: lobby='{lobby}'");
-
             var result = await runner.JoinSessionLobby(lobby);
 
-            Debug.Log($"{LogPrefix} join lobby ok={result.Ok}, lobby='{lobby}'");
             return result.Ok;
         }
     }
