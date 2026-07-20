@@ -2,6 +2,7 @@ using Config;
 using Fusion;
 using Helpers;
 using Lobby;
+using Managers;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,6 +21,7 @@ namespace Network
                 return;
 
             _isExecuting = true;
+            DisconnectNotice.IntentionalExitInProgress = true;
 
             try
             {
@@ -40,6 +42,7 @@ namespace Network
             finally
             {
                 _isExecuting = false;
+                DisconnectNotice.IntentionalExitInProgress = false;
             }
         }
 

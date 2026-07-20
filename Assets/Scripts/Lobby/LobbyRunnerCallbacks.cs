@@ -1,6 +1,8 @@
 using Config;
 using Fusion;
 using Fusion.Sockets;
+using Managers;
+using Network;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -110,6 +112,12 @@ namespace Lobby
                 _runner = null;
         }
 
+        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
+        {
+            DisconnectNotice.MarkUnexpected();
+            SessionExitToMainMenu.Execute("[LobbyRunnerCallbacks]");
+        }
+
         private static bool IsLobbySceneActive()
         {
             return SceneManager.GetActiveScene().buildIndex == SceneCatalog.GetLobbyIndex();
@@ -119,7 +127,6 @@ namespace Lobby
         public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
         public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
         public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
-        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
         public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
         public void OnInput(NetworkRunner runner, NetworkInput input) { }
         public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }

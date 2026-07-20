@@ -1,5 +1,5 @@
 param(
-    [string]$ExePath = ".\Builds\05-21-2026\Pong_MP_2025.exe",
+    [string]$ExePath = ".\Builds\Pongo\Pong_MP_2025.exe",
     [ValidateSet(2, 4)][int]$MaxPlayers = 2,
     [string]$LogFile = ".\Logs\dedicated-server.log"
 )

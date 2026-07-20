@@ -24,6 +24,7 @@ namespace UI
         [Header("Game objects")]
         [SerializeField] private GameObject creditsPanel;
         [SerializeField] private GameObject usernameValidationPanel;
+        [SerializeField] private GameObject disconnectedPanel;
 
         [Header("Settings")]
         [SerializeField] private int usernameCharacterLimit = 10;
@@ -49,8 +50,16 @@ namespace UI
             quitButton.onClick.AddListener(QuitGame);
             usernameInputField.onValueChanged.AddListener(OnUsernameValueChanged);
 
+            play1v1Button.onClick.AddListener(HideDisconnectedPanel);
+            play2v2Button.onClick.AddListener(HideDisconnectedPanel);
+            creditsButton.onClick.AddListener(HideDisconnectedPanel);
+            if (closeCreditsButton != null) closeCreditsButton.onClick.AddListener(HideDisconnectedPanel);
+            quitButton.onClick.AddListener(HideDisconnectedPanel);
+            usernameInputField.onSelect.AddListener(OnUsernameInputSelected);
+
             if (creditsPanel != null) creditsPanel.SetActive(false);
             SetUsernameValidationVisible(false);
+            SetDisconnectedPanelVisible(Managers.DisconnectNotice.ConsumePending());
         }
 
         private void OnEnable()
@@ -74,6 +83,11 @@ namespace UI
         private static char OnValidateUsernameInput(string text, int charIndex, char addedChar)
         {
             return char.IsLetterOrDigit(addedChar) ? addedChar : '\0';
+        }
+
+        private void OnUsernameInputSelected(string _)
+        {
+            HideDisconnectedPanel();
         }
 
         private void OnUsernameValueChanged(string _)
@@ -117,6 +131,7 @@ namespace UI
             ReferenceValidator.ValidateOptional(closeCreditsButton, nameof(closeCreditsButton), this);
             ReferenceValidator.ValidateOptional(creditsPanel, nameof(creditsPanel), this);
             ReferenceValidator.ValidateOptional(usernameValidationPanel, nameof(usernameValidationPanel), this);
+            ReferenceValidator.ValidateOptional(disconnectedPanel, nameof(disconnectedPanel), this);
 
             return ok;
         }
@@ -142,14 +157,51 @@ namespace UI
             }
         }
 
+        private void SetDisconnectedPanelVisible(bool isVisible)
+        {
+            if (disconnectedPanel != null)
+            {
+                disconnectedPanel.SetActive(isVisible);
+            }
+        }
+
+        private void HideDisconnectedPanel()
+        {
+            SetDisconnectedPanelVisible(false);
+        }
+
         private void OnDestroy()
         {
-            if (play1v1Button != null) play1v1Button.onClick.RemoveListener(OnPlay1v1Clicked);
-            if (play2v2Button != null) play2v2Button.onClick.RemoveListener(OnPlay2v2Clicked);
-            if (creditsButton != null) creditsButton.onClick.RemoveListener(OnCreditsClicked);
-            if (closeCreditsButton != null) closeCreditsButton.onClick.RemoveListener(OnCloseCreditsClicked);
-            if (quitButton != null) quitButton.onClick.RemoveListener(QuitGame);
-            if (usernameInputField != null) usernameInputField.onValueChanged.RemoveListener(OnUsernameValueChanged);
+            if (play1v1Button != null)
+            {
+                play1v1Button.onClick.RemoveListener(OnPlay1v1Clicked);
+                play1v1Button.onClick.RemoveListener(HideDisconnectedPanel);
+            }
+            if (play2v2Button != null)
+            {
+                play2v2Button.onClick.RemoveListener(OnPlay2v2Clicked);
+                play2v2Button.onClick.RemoveListener(HideDisconnectedPanel);
+            }
+            if (creditsButton != null)
+            {
+                creditsButton.onClick.RemoveListener(OnCreditsClicked);
+                creditsButton.onClick.RemoveListener(HideDisconnectedPanel);
+            }
+            if (closeCreditsButton != null)
+            {
+                closeCreditsButton.onClick.RemoveListener(OnCloseCreditsClicked);
+                closeCreditsButton.onClick.RemoveListener(HideDisconnectedPanel);
+            }
+            if (quitButton != null)
+            {
+                quitButton.onClick.RemoveListener(QuitGame);
+                quitButton.onClick.RemoveListener(HideDisconnectedPanel);
+            }
+            if (usernameInputField != null)
+            {
+                usernameInputField.onValueChanged.RemoveListener(OnUsernameValueChanged);
+                usernameInputField.onSelect.RemoveListener(OnUsernameInputSelected);
+            }
         }
 
     }

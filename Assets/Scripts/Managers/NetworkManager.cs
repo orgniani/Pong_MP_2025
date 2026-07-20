@@ -228,8 +228,17 @@ namespace Managers
         {
             Debug.LogWarning($"{LogPrefix} disconnect reason: mode={runner.GameMode}, reason={reason}, session='{runner.SessionInfo.Name}'");
 
-            if (_networkRunner != null && _networkRunner.IsClient)
+            if (_networkRunner == null || !_networkRunner.IsClient)
+                return;
+
+            if (_gameOverManager != null && _gameOverManager.IsGameOver)
+            {
                 Shutdown();
+                return;
+            }
+
+            DisconnectNotice.MarkUnexpected();
+            SessionExitToMainMenu.Execute(LogPrefix);
         }
 
         void INetworkRunnerCallbacks.OnInput(NetworkRunner runner, NetworkInput input)

@@ -14,4 +14,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   countdownSeconds: 3
   dedicatedServerSlots: 1
-  matchDurationSeconds: 240
+  matchDurationSeconds: 120

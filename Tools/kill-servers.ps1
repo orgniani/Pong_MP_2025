@@ -18,12 +18,18 @@ function Stop-Target {
 }
 
 if ($All) {
-    $procs = Get-Process -Name $ExeName -ErrorAction SilentlyContinue
-    if (-not $procs) {
-        Write-Host "No running instances of $ExeName found."
+    $dedicatedProcs = Get-CimInstance Win32_Process -Filter "Name = '$ExeName.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match '-dedicated' }
+
+    if (-not $dedicatedProcs) {
+        Write-Host "No running dedicated-server instances of $ExeName found."
         exit 0
     }
-    foreach ($p in $procs) { Stop-Target $p }
+
+    foreach ($dedicatedProc in $dedicatedProcs) {
+        $proc = Get-Process -Id $dedicatedProc.ProcessId -ErrorAction SilentlyContinue
+        if ($proc) { Stop-Target $proc }
+    }
     if (-not $DryRun -and (Test-Path $PidFile)) { Remove-Item $PidFile -Force }
     exit 0
 }
