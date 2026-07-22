@@ -67,9 +67,12 @@ namespace Network
             _isBusy = true;
             try
             {
-                await ShutdownLobbyRunnerAsync();
-
-                var gameRunner = CreateRunner("NetworkRunner");
+                var gameRunner = _lobbyRunner != null ? _lobbyRunner : CreateRunner("NetworkRunner");
+                if (_lobbyRunner != null)
+                {
+                    _lobbyRunner.RemoveCallbacks(this);
+                }
+                _lobbyRunner = null;
                 LobbyRunnerCallbacks.EnsureOnRunner(gameRunner);
 
                 var ok = await _sessionHandler.StartClient(gameRunner, sessionName);
