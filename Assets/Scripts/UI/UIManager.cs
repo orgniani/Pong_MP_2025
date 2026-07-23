@@ -3,10 +3,10 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Helpers;
 using Network;
 using Players;
 using Balls;
+using Helpers;
 
 namespace UI
 {
@@ -35,8 +35,6 @@ namespace UI
 
         private UITimer _uiTimer;
         private UIScore _uiScore;
-
-        private bool _unlockedWithEsc = false;
 
         private void Awake()
         {
@@ -71,8 +69,6 @@ namespace UI
             }
 
             Player.OnAnyUsernameChanged -= HandleRosterChanged;
-
-            CursorLocker.Unlock();
         }
 
         private IEnumerator Start()
@@ -107,14 +103,6 @@ namespace UI
 
         private void Update()
         {
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                CursorLocker.Unlock();
-                _unlockedWithEsc = true;
-            }
-
-            TryRelockCursorOnClick();
-
             if (_uiTimer == null || _uiScore == null)
                 return;
 
@@ -165,7 +153,6 @@ namespace UI
 
         private void ShowGameOver(string winnersText, GameOverReason reason)
         {
-            CursorLocker.Unlock();
             gameOverCanvas.SetActive(true);
             finalWinnersText.text = winnersText;
             playerDisconnectedNode.SetActive(reason == GameOverReason.PlayerDisconnected);
@@ -174,28 +161,6 @@ namespace UI
         private void ReturnToMainMenu()
         {
             SessionExitToMainMenu.Execute("[UIManager]");
-        }
-
-        private void TryRelockCursorOnClick()
-        {
-            if (_unlockedWithEsc && Input.GetMouseButtonDown(0))
-            {
-                if (!IsPointerOverButton(menuButton))
-                {
-                    _unlockedWithEsc = false;
-                }
-            }
-        }
-
-        private bool IsPointerOverButton(Button button)
-        {
-            if (button == null || button.gameObject == null)
-                return false;
-
-            RectTransform rectTransform = button.GetComponent<RectTransform>();
-            if (rectTransform == null) return false;
-
-            return RectTransformUtility.RectangleContainsScreenPoint(rectTransform, Input.mousePosition, null);
         }
     }
 }
