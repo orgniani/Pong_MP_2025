@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Common;
+using Common.Teams;
 using Config;
 using Fusion;
 using Lobby.SessionSnapshot;
@@ -159,7 +160,7 @@ namespace Lobby
             SnapshotChanged?.Invoke(LobbySessionSnapshot.Empty);
 
             if (_runner != null && _runner.IsServer)
-                rosterState?.SetRoster(LobbyRosterData.Empty);
+                rosterState?.SetRoster(LobbyRosterUpdate.Empty);
         }
 
         public void RequestLocalPlayerReadyLock()
@@ -408,7 +409,7 @@ namespace Lobby
                 slotIndex++;
             }
 
-            _rosterState.SetRoster(new LobbyRosterData(
+            _rosterState.SetRoster(new LobbyRosterUpdate(
                 usernames: orderedUsernames,
                 playerIds: orderedPlayerIds,
                 readyStates: orderedReadyStates,

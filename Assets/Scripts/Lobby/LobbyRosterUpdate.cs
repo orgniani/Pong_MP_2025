@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 
-namespace Lobby.SessionSnapshot
+namespace Lobby
 {
-    public readonly struct LobbyRosterData
+    public readonly struct LobbyRosterUpdate
     {
-        public LobbyRosterData(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, IReadOnlyList<int> teamIds, IReadOnlyList<int> laneIds, IReadOnlyList<int> colorIds, int currentPlayerCount, int targetPlayerCapacity)
+        public LobbyRosterUpdate(IReadOnlyList<string> usernames, IReadOnlyList<int> playerIds, IReadOnlyList<bool> readyStates, IReadOnlyList<int> teamIds, IReadOnlyList<int> laneIds, IReadOnlyList<int> colorIds, int currentPlayerCount, int targetPlayerCapacity)
         {
             Usernames = usernames;
             PlayerIds = playerIds;
@@ -17,7 +17,7 @@ namespace Lobby.SessionSnapshot
             TargetPlayerCapacity = targetPlayerCapacity;
         }
 
-        public static LobbyRosterData Empty { get; } = new(
+        public static LobbyRosterUpdate Empty { get; } = new(
             usernames: Array.Empty<string>(),
             playerIds: Array.Empty<int>(),
             readyStates: Array.Empty<bool>(),

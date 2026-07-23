@@ -1,16 +1,15 @@
 using System;
 using System.Collections;
-using Network;
 using UnityEngine;
 
-namespace Lobby
+namespace Network
 {
-    public sealed class LobbyAutoStartCoordinator
+    public sealed class AutoStartCoordinator
     {
         private readonly float _rearmDelaySeconds;
         private Coroutine _pendingRetry;
 
-        public LobbyAutoStartCoordinator(float rearmDelaySeconds = 0f)
+        public AutoStartCoordinator(float rearmDelaySeconds = 0f)
         {
             _rearmDelaySeconds = Mathf.Max(0f, rearmDelaySeconds);
         }

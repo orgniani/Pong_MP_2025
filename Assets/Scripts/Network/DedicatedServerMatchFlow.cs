@@ -16,14 +16,14 @@ namespace Network
     {
         private static readonly Dictionary<NetworkRunner, DedicatedServerMatchFlow> ActiveFlows = new();
         private readonly TaskCompletionSource<ShutdownReason> _shutdownTcs;
-        private readonly LobbyAutoStartCoordinator _lobbyAutoStartCoordinator;
+        private readonly AutoStartCoordinator _autoStartCoordinator;
 
         public DedicatedServerMatchFlow(
             TaskCompletionSource<ShutdownReason> shutdownTcs = null,
-            LobbyAutoStartCoordinator lobbyAutoStartCoordinator = null)
+            AutoStartCoordinator autoStartCoordinator = null)
         {
             _shutdownTcs = shutdownTcs;
-            _lobbyAutoStartCoordinator = lobbyAutoStartCoordinator ?? new LobbyAutoStartCoordinator();
+            _autoStartCoordinator = autoStartCoordinator ?? new AutoStartCoordinator();
         }
 
         public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
@@ -88,7 +88,7 @@ namespace Network
         public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
         {
             ActiveFlows.Remove(runner);
-            _lobbyAutoStartCoordinator.Cancel(runner);
+            _autoStartCoordinator.Cancel(runner);
             _shutdownTcs?.TrySetResult(shutdownReason);
         }
         public void OnConnectedToServer(NetworkRunner runner) { }
@@ -116,7 +116,7 @@ namespace Network
 
             if (SceneManager.GetActiveScene().buildIndex != lobbySceneIndex)
             {
-                _lobbyAutoStartCoordinator.Cancel(runner);
+                _autoStartCoordinator.Cancel(runner);
                 return;
             }
 
@@ -124,13 +124,13 @@ namespace Network
             if (matchSessionState?.MatchInProgress == true || matchSessionState?.IsPostGameCleanup == true)
                 return;
 
-            _lobbyAutoStartCoordinator.Schedule(runner, matchSessionState, () => TryStartMatch(runner));
+            _autoStartCoordinator.Schedule(runner, matchSessionState, () => TryStartMatch(runner));
         }
 
         public void OnSceneLoadStart(NetworkRunner runner)
         {
             RegisterRunner(runner);
-            _lobbyAutoStartCoordinator.Cancel(runner);
+            _autoStartCoordinator.Cancel(runner);
         }
 
         private void RegisterRunner(NetworkRunner runner)

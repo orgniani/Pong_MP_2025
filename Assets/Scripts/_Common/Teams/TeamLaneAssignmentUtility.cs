@@ -1,6 +1,6 @@
 using Common;
 
-namespace Lobby.SessionSnapshot
+namespace Common.Teams
 {
     public static class TeamLaneAssignmentUtility
     {

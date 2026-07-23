@@ -87,7 +87,7 @@ namespace Lobby
             }
         }
 
-        public void SetRoster(LobbyRosterData roster)
+        public void SetRoster(LobbyRosterUpdate roster)
         {
             if (!Object.HasStateAuthority)
                 return;
