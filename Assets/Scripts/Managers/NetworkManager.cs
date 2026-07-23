@@ -21,6 +21,7 @@ namespace Managers
         [Header("References")]
         [SerializeField] private Transform[] oneVsOneSpawnPoints;
         [SerializeField] private Transform[] twoVsTwoSpawnPoints;
+        [SerializeField] private Ball ball;
 
         [Header("Prefabs")]
         [SerializeField] private NetworkPrefabRef playerPrefab;
@@ -34,7 +35,7 @@ namespace Managers
         
         private NetworkRunner _networkRunner;
         private NetworkPlayerSpawner _playerSpawner;
-        private Ball _boundBall;
+        private bool _ballBound;
 
         public event Action OnConnected;
         public event Action OnDisconnected;
@@ -48,6 +49,7 @@ namespace Managers
         {
             ReferenceValidator.ValidateOptional(oneVsOneSpawnPoints, nameof(oneVsOneSpawnPoints), this);
             ReferenceValidator.ValidateOptional(twoVsTwoSpawnPoints, nameof(twoVsTwoSpawnPoints), this);
+            ReferenceValidator.Validate(ball, nameof(ball), this);
 
             var runner = FindFirstObjectByType<NetworkRunner>();
             if (runner != null)
@@ -307,21 +309,12 @@ namespace Managers
 
         private void TryBindBallGoalCallbacks()
         {
-            if (_scoreManager == null)
+            if (_scoreManager == null || ball == null || _ballBound)
                 return;
-
-            var ball = FindFirstObjectByType<Ball>();
-            if (ball == null)
-                return;
-
-            if (_boundBall == ball)
-                return;
-
-            ClearBallGoalCallbacks();
 
             ball.OnLeftGoal += _scoreManager.RegisterRightGoal;
             ball.OnRightGoal += _scoreManager.RegisterLeftGoal;
-            _boundBall = ball;
+            _ballBound = true;
         }
 
         public void PrepareForLobbyState()
@@ -347,13 +340,13 @@ namespace Managers
 
         private void ClearBallGoalCallbacks()
         {
-            if (_boundBall != null && _scoreManager != null)
+            if (_ballBound && ball != null && _scoreManager != null)
             {
-                _boundBall.OnLeftGoal -= _scoreManager.RegisterRightGoal;
-                _boundBall.OnRightGoal -= _scoreManager.RegisterLeftGoal;
+                ball.OnLeftGoal -= _scoreManager.RegisterRightGoal;
+                ball.OnRightGoal -= _scoreManager.RegisterLeftGoal;
             }
 
-            _boundBall = null;
+            _ballBound = false;
         }
 
         private void EnsureGameplayManagers(NetworkRunner runner)

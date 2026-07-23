@@ -1370,6 +1370,10 @@ PrefabInstance:
     m_TransformParent: {fileID: 0}
     m_Modifications:
     - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
+      propertyPath: ball
+      value: 
+      objectReference: {fileID: 6633243777193437339}
+    - target: {fileID: 487846020086074125, guid: d29334e569ff13b4c8b32a0e14d38c93, type: 3}
       propertyPath: isPersistent
       value: 0
       objectReference: {fileID: 0}
@@ -1935,16 +1939,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   powerUpPrefab: {fileID: 5727173546220971723, guid: 12f57349e05dbdf48850721834c84b16, type: 3}
-  powerUpDefinitions:
-  - {fileID: 11400000, guid: ffdb71339b374b558601c204b3f6632f, type: 2}
-  - {fileID: 11400000, guid: 982f346a6a1d4ecbbad044a4c176b240, type: 2}
-  - {fileID: 11400000, guid: c714f95e2275452785bef9b01d1822b7, type: 2}
   spawnPoints:
   - {fileID: 568968257}
   - {fileID: 267535170}
   - {fileID: 848434931}
   - {fileID: 48448748}
   spawnInterval: 10
+  powerUpDefinitions:
+  - {fileID: 11400000, guid: ffdb71339b374b558601c204b3f6632f, type: 2}
+  - {fileID: 11400000, guid: 982f346a6a1d4ecbbad044a4c176b240, type: 2}
+  - {fileID: 11400000, guid: c714f95e2275452785bef9b01d1822b7, type: 2}
 --- !u!4 &933723726
 Transform:
   m_ObjectHideFlags: 0

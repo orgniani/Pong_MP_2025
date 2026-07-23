@@ -63,7 +63,10 @@ namespace Managers
             _ball?.StopImmediately();
 
             if (Object.HasStateAuthority)
+            {
+                Runner.GetComponent<MatchSessionState>()?.MarkMatchEnded();
                 StartCoroutine(ReturnToLobbyAfterDelay());
+            }
         }
 
         private IEnumerator ReturnToLobbyAfterDelay()
@@ -78,7 +81,6 @@ namespace Managers
             if (_scoreManager != null)
                 Runner.Despawn(_scoreManager.Object);
 
-            Runner.GetComponent<MatchSessionState>()?.MarkMatchEnded();
             NetworkManager.Instance?.PrepareForLobbyState();
             NetworkManager.Instance?.ForceDisconnectAllPlayers(Runner);
 
