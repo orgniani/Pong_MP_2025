@@ -19,6 +19,8 @@ namespace Boot
 
         private void Awake()
         {
+            DedicatedServerUiSuppressor.Install();
+
             ReferenceValidator.ValidateOptional(matchRulesConfig, nameof(matchRulesConfig), this);
             if (matchRulesConfig != null)
                 MatchRulesRegistry.RegisterProvider(new MatchRulesProvider(matchRulesConfig), this);
@@ -42,7 +44,15 @@ namespace Boot
 
             while (true)
             {
-                await RunServerSession(options, lobbySceneIndex);
+                try
+                {
+                    await RunServerSession(options, lobbySceneIndex);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"[DedicatedServerBootstrap] Server session failed, restarting in {restartDelaySec}s: {e}");
+                }
+
                 await Task.Delay(TimeSpan.FromSeconds(restartDelaySec));
             }
         }
@@ -50,27 +60,32 @@ namespace Boot
         private async Task RunServerSession(DedicatedServerOptions options, int lobbySceneIndex)
         {
             var runnerObj = new GameObject("NetworkRunner", typeof(NetworkRunner));
-            DontDestroyOnLoad(runnerObj);
-            runnerObj.AddComponent<MatchSessionState>();
-            var runner = runnerObj.GetComponent<NetworkRunner>();
-            runner.ProvideInput = false;
-            LobbyRunnerCallbacks.EnsureOnRunner(runner);
 
-            var shutdownTcs = new TaskCompletionSource<ShutdownReason>();
-            runner.AddCallbacks(new DedicatedServerMatchFlow(shutdownTcs));
-
-            var sessionHandler = new NetworkSessionHandler();
-            var ok = await sessionHandler.StartServer(runner, options.MaxPlayers, lobbySceneIndex, options.SessionName, options.Region, options.Port);
-            if (!ok)
+            try
             {
-                Destroy(runnerObj);
-                return;
+                DontDestroyOnLoad(runnerObj);
+                runnerObj.AddComponent<MatchSessionState>();
+                var runner = runnerObj.GetComponent<NetworkRunner>();
+                runner.ProvideInput = false;
+                LobbyRunnerCallbacks.EnsureOnRunner(runner);
+
+                var shutdownTcs = new TaskCompletionSource<ShutdownReason>();
+                runner.AddCallbacks(new DedicatedServerMatchFlow(shutdownTcs));
+
+                var sessionHandler = new NetworkSessionHandler();
+                var ok = await sessionHandler.StartServer(runner, options.MaxPlayers, lobbySceneIndex, options.SessionName, options.Region, options.Port);
+                if (!ok)
+                {
+                    return;
+                }
+
+                await shutdownTcs.Task;
             }
-
-            await shutdownTcs.Task;
-
-            if (runnerObj != null)
-                Destroy(runnerObj);
+            finally
+            {
+                if (runnerObj != null)
+                    Destroy(runnerObj);
+            }
         }
 
         private DedicatedServerOptions BuildServerOptions()

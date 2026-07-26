@@ -53,6 +53,9 @@ namespace Managers
 
         public void StopTimer()
         {
+            if (!HasStateAuthority)
+                return;
+
             _timerRunning = false;
         }
 

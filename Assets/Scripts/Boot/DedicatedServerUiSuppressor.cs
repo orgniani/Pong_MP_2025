@@ -6,40 +6,36 @@ namespace Boot
 {
     public static class DedicatedServerUiSuppressor
     {
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-        private static void Install()
+        private static bool _installed;
+
+        public static void Install()
         {
+            if (_installed)
+            {
+                return;
+            }
+
             if (!DedicatedServerEnvironment.HasDedicatedFlag() || !DedicatedServerEnvironment.IsHeadless)
             {
                 return;
             }
 
+            _installed = true;
             SceneManager.sceneLoaded += OnSceneLoaded;
-
-            for (int i = 0; i < SceneManager.sceneCount; i++)
-            {
-                var scene = SceneManager.GetSceneAt(i);
-                if (scene.isLoaded)
-                {
-                    SuppressCanvases(scene);
-                }
-            }
+            SuppressAllCanvases();
         }
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            SuppressCanvases(scene);
+            SuppressAllCanvases();
         }
 
-        private static void SuppressCanvases(Scene scene)
+        private static void SuppressAllCanvases()
         {
             var canvases = Object.FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var canvas in canvases)
             {
-                if (canvas.gameObject.scene == scene)
-                {
-                    canvas.enabled = false;
-                }
+                canvas.enabled = false;
             }
         }
     }
